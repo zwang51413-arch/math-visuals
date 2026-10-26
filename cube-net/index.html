@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>正方体展开图：平面如何折回立体</title>
+  <style>
+:root {
+  --bg: #FBF7F6;
+  --card: #FFFFFF;
+  --ink: #3A3A3A;
+  --muted: #8A7F80;
+  --pink: #D4537E;
+  --pink-deep: #993556;
+  --line: #F0E4E6;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.head {
+  padding: 20px 20px 4px;
+  text-align: center;
+}
+.head h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.head .sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 32px;
+}
+
+.stage {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: 0 6px 24px rgba(153, 53, 86, 0.06);
+}
+#cv {
+  display: block;
+  width: 100%;
+  height: 360px;
+  touch-action: none;
+  cursor: grab;
+}
+.hint {
+  margin: 10px 4px 2px;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: center;
+  min-height: 20px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-top: 12px;
+  padding: 14px 16px;
+}
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.slider-label {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 6px;
+  background: #F4D8E2;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(153, 53, 86, 0.4);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(153, 53, 86, 0.4);
+  cursor: pointer;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--pink);
+}
+
+.picker { margin-top: 18px; }
+.picker-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.picker-sub {
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.picker-title.challenge { margin-top: 20px; }
+
+.nets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.net-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  min-width: 72px;
+}
+.net-btn canvas {
+  display: block;
+  pointer-events: none;
+}
+.net-btn .net-name {
+  font-size: 12px;
+  color: var(--muted);
+}
+.net-btn.active {
+  border-color: var(--pink);
+  background: #FDF1F5;
+}
+.net-btn.active .net-name { color: var(--pink-deep); }
+.net-btn.illegal .net-name { color: #A06B1E; }
+.net-btn:active { transform: scale(0.96); }
+
+@media (max-width: 480px) {
+  .wrap { padding: 10px 10px 24px; }
+  #cv { height: 300px; }
+  .nets { gap: 8px; }
+  .net-btn { min-width: 64px; }
+}
+
+  </style>
+</head>
+<body>
+  <header class="head">
+    <h1>正方体展开图</h1>
+    <p class="sub">同一个正方体，不同的摊开方式</p>
+  </header>
+
+  <main class="wrap">
+    <section class="stage">
+      <canvas id="cv" aria-label="展开图折叠动画"></canvas>
+      <p class="hint" id="hint" aria-live="polite">拖动滑杆，把这张纸折成一个正方体</p>
+    </section>
+
+    <section class="panel">
+      <div class="slider-row">
+        <span class="slider-label">摊开</span>
+        <input type="range" id="fold" min="0" max="1" step="0.01" value="0" aria-label="折叠进度">
+        <span class="slider-label">折好</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="showFaces" checked>
+        <span>标出相对面（上/下 · 左/右 · 前/后）</span>
+      </label>
+    </section>
+
+    <section class="picker">
+      <h2 class="picker-title">选一个展开图，折折看</h2>
+      <p class="picker-sub">下面 11 种都能折成同一个正方体</p>
+      <div class="nets" id="nets"></div>
+
+      <h2 class="picker-title challenge">挑战：这两个能折成正方体吗？</h2>
+      <div class="nets" id="illegalNets"></div>
+    </section>
+  </main>
+
+  <script>
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.CubeNet = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  // ---------- 4×4 矩阵（行主序，作用于列向量） ----------
+  function identity() {
+    return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  }
+
+  // C = A × B（均为行主序 4×4）
+  function mul(A, B) {
+    const C = new Array(16).fill(0);
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        let s = 0;
+        for (let k = 0; k < 4; k++) s += A[r * 4 + k] * B[k * 4 + c];
+        C[r * 4 + c] = s;
+      }
+    }
+    return C;
+  }
+
+  function translate(x, y, z) {
+    return [1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1];
+  }
+
+  function rotX(rad) {
+    const c = Math.cos(rad), s = Math.sin(rad);
+    return [1, 0, 0, 0, 0, c, -s, 0, 0, s, c, 0, 0, 0, 0, 1];
+  }
+
+  function rotY(rad) {
+    const c = Math.cos(rad), s = Math.sin(rad);
+    return [c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0, 0, 0, 0, 1];
+  }
+
+  // 列向量 v=[x,y,z,w]，返回 [x,y,z,w]
+  function apply(M, v) {
+    return [
+      M[0] * v[0] + M[1] * v[1] + M[2] * v[2] + M[3] * v[3],
+      M[4] * v[0] + M[5] * v[1] + M[6] * v[2] + M[7] * v[3],
+      M[8] * v[0] + M[9] * v[1] + M[10] * v[2] + M[11] * v[3],
+      M[12] * v[0] + M[13] * v[1] + M[14] * v[2] + M[15] * v[3]
+    ];
+  }
+
+  // ---------- 折叠方向定义（parent 局部坐标系） ----------
+  // 子格绕 parent 某条棱折 90° 立起；sign × 90° 为绕轴转角
+  const DIRS = {
+    right: { dx: 1, dy: 0, axis: 'y', sign: -1, edge: [0.5, 0, 0] },
+    left: { dx: -1, dy: 0, axis: 'y', sign: 1, edge: [-0.5, 0, 0] },
+    top: { dx: 0, dy: 1, axis: 'x', sign: 1, edge: [0, 0.5, 0] },
+    bottom: { dx: 0, dy: -1, axis: 'x', sign: -1, edge: [0, -0.5, 0] }
+  };
+  const DIR_KEYS = ['right', 'left', 'top', 'bottom'];
+
+  function keyOf(x, y) {
+    return x + ',' + y;
+  }
+
+  // 给定格子集（[{x,y}]）与 root 格、折叠进度 t∈[0,1]，返回每个格子的世界变换矩阵
+  function computeMatrices(cells, rootKey, t) {
+    const cellMap = new Map(cells.map(c => [keyOf(c.x, c.y), c]));
+    const mats = {};
+    const queue = [rootKey];
+    const visited = new Set([rootKey]);
+    mats[rootKey] = identity();
+    while (queue.length) {
+      const cur = queue.shift();
+      const [cx, cy] = cur.split(',').map(Number);
+      for (const name of DIR_KEYS) {
+        const d = DIRS[name];
+        const nk = keyOf(cx + d.dx, cy + d.dy);
+        if (cellMap.has(nk) && !visited.has(nk)) {
+          visited.add(nk);
+          const theta = d.sign * t * Math.PI / 2;
+          const [px, py, pz] = d.edge;
+          const R = d.axis === 'x' ? rotX(theta) : rotY(theta);
+          const F = mul(translate(px, py, pz), mul(R, translate(-px, -py, -pz)));
+          const Tc = translate(d.dx, d.dy, 0);
+          mats[nk] = mul(mats[cur], mul(F, Tc));
+          queue.push(nk);
+        }
+      }
+    }
+    return mats;
+  }
+
+  // 折叠后每个格子的世界中心与四角（3D）
+  function foldGeometry(cells, rootKey, t) {
+    const mats = computeMatrices(cells, rootKey, t);
+    const out = {};
+    const cornersLocal = [[-0.5, -0.5, 0], [0.5, -0.5, 0], [0.5, 0.5, 0], [-0.5, 0.5, 0]];
+    for (const c of cells) {
+      const k = keyOf(c.x, c.y);
+      const M = mats[k];
+      const center = apply(M, [0, 0, 0, 1]);
+      const corners = cornersLocal.map(v => {
+        const p = apply(M, [v[0], v[1], v[2], 1]);
+        return [p[0], p[1], p[2]];
+      });
+      out[k] = { center: [center[0], center[1], center[2]], corners };
+    }
+    return out;
+  }
+
+  // 由折叠结果推导 face 标签：相对 6 面中心偏移的主轴
+  function deriveFaces(folded) {
+    const keys = Object.keys(folded);
+    const n = keys.length;
+    const mid = [0, 0, 0];
+    for (const k of keys) {
+      const c = folded[k].center;
+      mid[0] += c[0]; mid[1] += c[1]; mid[2] += c[2];
+    }
+    mid[0] /= n; mid[1] /= n; mid[2] /= n;
+    const faces = {};
+    for (const k of keys) {
+      const c = folded[k].center;
+      const dx = c[0] - mid[0], dy = c[1] - mid[1], dz = c[2] - mid[2];
+      const ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz);
+      let face;
+      if (az >= ax && az >= ay) face = dz > 0 ? '上' : '下';
+      else if (ax >= ay) face = dx > 0 ? '右' : '左';
+      else face = dy > 0 ? '前' : '后';
+      faces[k] = face;
+    }
+    return faces;
+  }
+
+  function dist3(a, b) {
+    const dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+
+  // 折叠到 t=1 是否恰好折成正方体（6 面不重叠、不缺面）
+  function isLegal(cells, rootKey) {
+    if (cells.length !== 6) return false;
+    const folded = foldGeometry(cells, rootKey, 1);
+    const faces = deriveFaces(folded);
+    const used = new Set(Object.values(faces));
+    if (used.size !== 6) return false;
+    const keys = Object.keys(folded);
+    for (let i = 0; i < keys.length; i++) {
+      for (let j = i + 1; j < keys.length; j++) {
+        if (dist3(folded[keys[i]].center, folded[keys[j]].center) < 0.6) return false;
+      }
+    }
+    return true;
+  }
+
+  // 展开图整体是否合法（存在某个格子作底面能折成正方体）
+  function isLegalNet(cells) {
+    for (const c of cells) {
+      if (isLegal(cells, keyOf(c.x, c.y))) return true;
+    }
+    return false;
+  }
+
+  // ---------- 枚举所有 6 格连通形状并筛出合法展开图 ----------
+  function enumerateHexominoes() {
+    const seen = new Set();
+    const results = [];
+    const canon = cells => {
+      const minX = Math.min(...cells.map(c => c[0]));
+      const minY = Math.min(...cells.map(c => c[1]));
+      return cells.map(c => [c[0] - minX, c[1] - minY]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    };
+    const keyOfCells = cells => canon(cells).map(c => c.join(',')).join(';');
+    function grow(cells) {
+      if (cells.length === 6) {
+        const k = keyOfCells(cells);
+        if (!seen.has(k)) { seen.add(k); results.push(canon(cells)); }
+        return;
+      }
+      const have = new Set(cells.map(c => c.join(',')));
+      for (const [x, y] of cells) {
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const n = [x + dx, y + dy];
+          if (!have.has(n.join(','))) grow([...cells, n]);
+        }
+      }
+    }
+    grow([[0, 0]]);
+    return results;
+  }
+
+  // 自由形状规范化（旋转 + 镜像下取字典序最小），用于去重
+  function normalizeNet(cells) {
+    let best = null;
+    const T = [
+      [1, 0, 0, 1], [0, -1, 1, 0], [-1, 0, 0, -1], [0, 1, -1, 0],
+      [1, 0, 0, -1], [0, 1, 1, 0], [-1, 0, 0, 1], [0, -1, -1, 0]
+    ];
+    for (const [a, b, c, d] of T) {
+      const t = cells.map(p => ({ x: a * p.x + b * p.y, y: c * p.x + d * p.y }));
+      const minX = Math.min(...t.map(p => p.x)), minY = Math.min(...t.map(p => p.y));
+      const s = t.map(p => [p.x - minX, p.y - minY]).sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+      const k = JSON.stringify(s);
+      if (!best || k < best) best = k;
+    }
+    return best;
+  }
+
+  function enumerateLegalNets() {
+    const seen = new Set();
+    const result = [];
+    const hex = enumerateHexominoes().map(cs => cs.map(([x, y]) => ({ x, y })));
+    for (const cells of hex) {
+      if (!isLegalNet(cells)) continue;
+      const k = normalizeNet(cells);
+      if (!seen.has(k)) { seen.add(k); result.push(cells); }
+    }
+    return result;
+  }
+
+  // 真 3D 等轴测投影（观察方向右前上）。
+  // 折叠坐标系：(x', y') 为摊平平面、root 面在 z'=0、盒子向 z' 方向立起。
+  // 场景坐标系：x 向右、y 向上、z 向前。变换 x=x'、y=z'、z=y'，
+  // 于是 root 面永远铺在地面 y=0 上，其余面向上立起。
+  function project(p, ox, oy, scale) {
+    const xp = p[0], yp = p[1], zp = p[2];
+    const x = xp, y = zp, z = yp;
+    return [
+      ox + scale * (x - z) * 0.94,
+      oy + scale * ((x + z) * 0.34 - y)
+    ];
+  }
+
+  // 场景深度（观察方向 1,1,1）：越大越靠近观察者，画家算法按升序先画远的
+  function depthOf(p) {
+    return p[0] + p[1] + p[2];
+  }
+
+  // 选折叠基准面（底面）：度数最高的格子，平局取最靠中心的，让折叠动画对称自然
+  function findRoot(cells) {
+    const key = keyOf;
+    const set = new Set(cells.map(c => key(c.x, c.y)));
+    const degree = cells.map(c => {
+      const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => set.has(key(c.x + dx, c.y + dy))).length;
+      return { c, n };
+    });
+    const maxDeg = Math.max(...degree.map(d => d.n));
+    const top = degree.filter(d => d.n === maxDeg).map(d => d.c);
+    const cx = cells.reduce((s, c) => s + c.x, 0) / cells.length;
+    const cy = cells.reduce((s, c) => s + c.y, 0) / cells.length;
+    top.sort((a, b) => ((a.x - cx) ** 2 + (a.y - cy) ** 2) - ((b.x - cx) ** 2 + (b.y - cy) ** 2));
+    return key(top[0].x, top[0].y);
+  }
+
+  const pt = (x, y) => ({ x, y });
+
+  // 11 种合法展开图（按 1-4-1 / 2-3-1 / 2-2-2 / 3-3 四类，横排为主的朝向）
+  const NETS = [
+    { id: 'cross', name: '十字', type: '1-4-1', cells: [pt(0, 1), pt(1, 0), pt(1, 1), pt(1, 2), pt(2, 1), pt(3, 1)] },
+    { id: 'n141b', name: '错位', type: '1-4-1', cells: [pt(0, 1), pt(1, 1), pt(1, 2), pt(2, 0), pt(2, 1), pt(3, 1)] },
+    { id: 'n141c', name: '左垂', type: '1-4-1', cells: [pt(0, 0), pt(0, 1), pt(1, 1), pt(1, 2), pt(2, 1), pt(3, 1)] },
+    { id: 'n141d', name: '右垂', type: '1-4-1', cells: [pt(0, 1), pt(1, 1), pt(1, 2), pt(2, 1), pt(3, 0), pt(3, 1)] },
+    { id: 'n141e', name: '对角', type: '1-4-1', cells: [pt(0, 1), pt(0, 2), pt(1, 1), pt(2, 1), pt(3, 0), pt(3, 1)] },
+    { id: 'n141f', name: '同列', type: '1-4-1', cells: [pt(0, 0), pt(0, 1), pt(0, 2), pt(1, 1), pt(2, 1), pt(3, 1)] },
+    { id: 'n231a', name: '拐角', type: '2-3-1', cells: [pt(0, 1), pt(1, 1), pt(1, 2), pt(1, 3), pt(2, 0), pt(2, 1)] },
+    { id: 'n231b', name: '折线', type: '2-3-1', cells: [pt(0, 1), pt(1, 1), pt(1, 2), pt(2, 0), pt(2, 1), pt(3, 0)] },
+    { id: 'n231c', name: '阶梯', type: '2-3-1', cells: [pt(0, 0), pt(0, 1), pt(1, 1), pt(2, 1), pt(2, 2), pt(3, 2)] },
+    { id: 'stair', name: '楼梯', type: '2-2-2', cells: [pt(0, 2), pt(1, 1), pt(1, 2), pt(2, 0), pt(2, 1), pt(3, 0)] },
+    { id: 'long', name: '长条', type: '3-3', cells: [pt(0, 0), pt(1, 0), pt(2, 0), pt(2, 1), pt(3, 1), pt(4, 1)] }
+  ];
+
+  // 两个非法图（6 格相连但折叠会重叠/不成正方体），用于"能不能折"挑战
+  const ILLEGAL_NETS = [
+    { id: 'line', name: '直线', cells: [pt(0, 0), pt(1, 0), pt(2, 0), pt(3, 0), pt(4, 0), pt(5, 0)] },
+    { id: 'grid23', name: '田字', cells: [pt(0, 0), pt(1, 0), pt(2, 0), pt(0, 1), pt(1, 1), pt(2, 1)] }
+  ];
+
+  return {
+    identity, mul, translate, rotX, rotY, apply,
+    DIRS, DIR_KEYS, keyOf,
+    computeMatrices, foldGeometry, deriveFaces, isLegal, isLegalNet,
+    enumerateHexominoes, enumerateLegalNets, normalizeNet,
+    project, dist3, depthOf,
+    NETS, ILLEGAL_NETS, findRoot
+  };
+});
+
+  </script>
+  <script>
+(function () {
+  'use strict';
+  const CubeNet = window.CubeNet;
+
+  // 六面色相在色环上均匀拉开约 60°（红/黄/绿/青/蓝/紫）。
+  // 原来黄-橙-粉三个暖色色相只差 20~30°，学生根本分不清。
+  const FACE_COLORS = {
+    '上': '#45B05C',  // 绿 ~120°
+    '下': '#EFC030',  // 黄 ~55°
+    '前': '#E03C5A',  // 红 ~355°
+    '后': '#9A5FD0',  // 紫 ~300°
+    '左': '#3D7FD8',  // 蓝 ~235°
+    '右': '#38B5B8'   // 青 ~180°
+  };
+  const FACE_EDGE = {
+    '上': '#2E8043', '下': '#B8901C',
+    '前': '#B02A45', '后': '#7440A8',
+    '左': '#2860AD', '右': '#1F888B'
+  };
+  // 相对面：用来标出"被这一面挡住的那一面"
+  const OPPOSITE = { '上': '下', '下': '上', '左': '右', '右': '左', '前': '后', '后': '前' };
+  // 颜色的日常叫法，方便学生对照
+  const COLOR_NAME = { '上': '绿', '下': '黄', '前': '红', '后': '紫', '左': '蓝', '右': '青' };
+
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const foldSlider = document.getElementById('fold');
+  const showFaces = document.getElementById('showFaces');
+  const netsEl = document.getElementById('nets');
+  const illegalEl = document.getElementById('illegalNets');
+  const hintEl = document.getElementById('hint');
+
+  const state = {
+    net: CubeNet.NETS[0],
+    illegal: false,
+    root: '',
+    t: 0,
+    faces: {},
+    visible: {},
+    hover: null,      // 鼠标所指的、真正可见的那一面
+    hoverPair: null   // 被它挡住的相对面
+  };
+
+  let fit = { scale: 1, ox: 0, oy: 0 };
+
+  const cssW = () => cv.width / (window.devicePixelRatio || 1);
+  const cssH = () => cv.height / (window.devicePixelRatio || 1);
+
+  // ---------- 地面 ----------
+  // 地面铺在 y=0 平面（折叠坐标里 z'=0），紧贴展开图只留少量边距，避免喧宾夺主
+  function groundBounds() {
+    const flat = CubeNet.foldGeometry(state.net.cells, state.root, 0);
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const k of Object.keys(flat)) {
+      for (const p of flat[k].corners) {
+        minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+        minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
+      }
+    }
+    return {
+      x0: minX - 0.55, x1: maxX + 0.55,
+      y0: minY - 0.55, y1: maxY + 0.55
+    };
+  }
+
+  // ---------- 地面：一块现实的木桌板（无网格） ----------
+  // 浅色橡木质感：暖底 + 细木纹 + 板边厚度，不抢几何的注意力
+  function woodCorners(g) {
+    const P = (x, y) => CubeNet.project([x, y, 0], 0, 0, 1);
+    return [P(g.x0, g.y0), P(g.x1, g.y0), P(g.x1, g.y1), P(g.x0, g.y1)]
+      .map(c => [fit.ox + c[0] * fit.scale, fit.oy + c[1] * fit.scale]);
+  }
+
+  function tracePoly(pts) {
+    ctx.beginPath();
+    pts.forEach((c, i) => { if (i === 0) ctx.moveTo(c[0], c[1]); else ctx.lineTo(c[0], c[1]); });
+    ctx.closePath();
+  }
+
+  function drawGround() {
+    const g = groundBounds();
+    const corners = woodCorners(g);
+    const P = (x, y) => {
+      const p = CubeNet.project([x, y, 0], 0, 0, 1);
+      return [fit.ox + p[0] * fit.scale, fit.oy + p[1] * fit.scale];
+    };
+
+    // 板厚：整体下移几像素的深色面，露出下沿即为厚度
+    const THICK = Math.max(3, Math.round(fit.scale * 0.07));
+    ctx.save();
+    ctx.translate(0, THICK);
+    tracePoly(corners);
+    ctx.fillStyle = '#C9A87F';
+    ctx.fill();
+    ctx.restore();
+
+    // 板面：斜向受光的浅木色
+    tracePoly(corners);
+    const grad = ctx.createLinearGradient(corners[0][0], corners[0][1], corners[2][0], corners[2][1]);
+    grad.addColorStop(0, '#F6E7D2');
+    grad.addColorStop(0.55, '#F0DDC4');
+    grad.addColorStop(1, '#E7D2B6');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 木纹：沿世界坐标 x 方向的纹理。用确定性伪随机让间隔不均、长短断续，
+    // 否则等间距直线看着像百叶窗而不像木头
+    ctx.save();
+    tracePoly(corners);
+    ctx.clip();
+    ctx.lineCap = 'round';
+    const rnd = n => {
+      const x = Math.sin(n * 127.1 + 11.7) * 43758.5453;
+      return x - Math.floor(x);
+    };
+    let y = g.y0;
+    let i = 0;
+    while (y < g.y1) {
+      const r1 = rnd(i * 1.7), r2 = rnd(i * 3.1), r3 = rnd(i * 5.3), r4 = rnd(i * 7.9);
+      // 有些线不贯穿整板，制造断续的天然纹理
+      const xa = g.x0 + (g.x1 - g.x0) * (r1 < 0.4 ? r1 * 0.7 : 0);
+      const xb = g.x1 - (g.x1 - g.x0) * (r2 < 0.4 ? r2 * 0.7 : 0);
+      const w1 = Math.sin(y * 37.7) * 0.012, w2 = Math.sin(y * 23.3) * 0.01;
+      const a = P(xa, y + w1);
+      const b = P(xb, y + w2);
+      ctx.strokeStyle = 'rgba(152, 112, 68, ' + (0.028 + r4 * 0.055).toFixed(3) + ')';
+      ctx.lineWidth = 0.6 + r4 * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(a[0], a[1]);
+      ctx.lineTo(b[0], b[1]);
+      ctx.stroke();
+      y += 0.035 + r3 * 0.13;
+      i++;
+    }
+    // 几条更深的年轮线
+    for (let k = 0; k < 5; k++) {
+      const yy = g.y0 + (g.y1 - g.y0) * (0.11 + k * 0.19);
+      const a = P(g.x0, yy), b = P(g.x1, yy + 0.022);
+      ctx.strokeStyle = 'rgba(140, 98, 56, 0.10)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(a[0], a[1]);
+      ctx.lineTo(b[0], b[1]);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 板面边缘
+    tracePoly(corners);
+    ctx.strokeStyle = 'rgba(190, 156, 114, 0.85)';
+    ctx.lineWidth = 1.6;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  // ---------- 布局与缩放 ----------
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = cv.getBoundingClientRect();
+    cv.width = Math.max(1, Math.round(rect.width * dpr));
+    cv.height = Math.max(1, Math.round(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    computeFit();
+    render();
+  }
+
+  function computeFit() {
+    const cells = state.net.cells;
+    const flat = CubeNet.foldGeometry(cells, state.root, 0);
+    const cube = CubeNet.foldGeometry(cells, state.root, 1);
+    const g = groundBounds();
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    const consider = p => {
+      const [sx, sy] = CubeNet.project(p, 0, 0, 1);
+      minX = Math.min(minX, sx); maxX = Math.max(maxX, sx);
+      minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
+    };
+    for (const f of [flat, cube]) {
+      for (const k of Object.keys(f)) for (const p of f[k].corners) consider(p);
+    }
+    for (const [x, y] of [[g.x0, g.y0], [g.x1, g.y0], [g.x1, g.y1], [g.x0, g.y1]]) consider([x, y, 0]);
+
+    const bw = Math.max(1e-6, maxX - minX);
+    const bh = Math.max(1e-6, maxY - minY);
+    const w = cssW(), h = cssH();
+    const scale = Math.min(w / bw, h / bh) * 0.88;
+    const ox = (w - bw * scale) / 2 - minX * scale;
+    const oy = (h - bh * scale) / 2 - minY * scale;
+    fit = { scale, ox, oy };
+  }
+
+  // ---------- 悬停命中：必须命中"真正露在最前面"的那一面 ----------
+  // 从近到远逐面做点在多边形内测试，第一个命中的就是鼠标实际指到的面。
+  // 这样绝不会出现"指着前面、却高亮后面"的错误。
+  function pointInPoly(px, py, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1];
+      const xj = poly[j][0], yj = poly[j][1];
+      const intersect = ((yi > py) !== (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function hitTest(px, py) {
+    const folded = CubeNet.foldGeometry(state.net.cells, state.root, state.t);
+    const polys = Object.keys(folded).map(key => {
+      const corners2 = folded[key].corners.map(p => CubeNet.project(p, 0, 0, 1));
+      return {
+        key,
+        screen: corners2.map(c => [fit.ox + c[0] * fit.scale, fit.oy + c[1] * fit.scale]),
+        depth: CubeNet.depthOf(folded[key].center)
+      };
+    });
+    // 从近到远：先命中者即最前面、未被遮挡的面
+    polys.sort((a, b) => b.depth - a.depth);
+    for (const p of polys) {
+      if (pointInPoly(px, py, p.screen)) return p.key;
+    }
+    return null;
+  }
+
+  function setHover(key) {
+    if (key === state.hover) return;
+    state.hover = key;
+    if (key) {
+      const opp = OPPOSITE[state.faces[key]] || null;
+      state.hoverPair = opp
+        ? Object.keys(state.faces).find(k => state.faces[k] === opp) || null
+        : null;
+    } else {
+      state.hoverPair = null;
+    }
+    render();
+  }
+
+  function updateHover(e) {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    if (state.t < 0.9) { setHover(null); return; }
+    const rect = cv.getBoundingClientRect();
+    setHover(hitTest(e.clientX - rect.left, e.clientY - rect.top));
+  }
+
+  // ---------- 渲染主画布 ----------
+  function render() {
+    ctx.clearRect(0, 0, cssW(), cssH());
+
+    drawGround();
+
+    const folded = CubeNet.foldGeometry(state.net.cells, state.root, state.t);
+    const polys = [];
+    for (const key of Object.keys(folded)) {
+      const corners2 = folded[key].corners.map(p => CubeNet.project(p, 0, 0, 1));
+      const c3 = folded[key].center;
+      const depth = CubeNet.depthOf(c3);
+      polys.push({ key, corners2, depth });
+    }
+    // 画家算法：深度小的（远）先画，大的（近）后画
+    polys.sort((a, b) => a.depth - b.depth);
+
+    const showLabels = showFaces.checked && state.t > 0.82;
+
+    for (const poly of polys) {
+      const face = state.faces[poly.key] || '前';
+      const color = FACE_COLORS[face] || '#ddd';
+      const edge = FACE_EDGE[face] || '#888';
+      const isHover = state.hover === poly.key;
+
+      ctx.beginPath();
+      poly.corners2.forEach((c, i) => {
+        const sx = fit.ox + c[0] * fit.scale;
+        const sy = fit.oy + c[1] * fit.scale;
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.closePath();
+      ctx.globalAlpha = isHover ? 0.88 : 0.58;
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = isHover ? '#2C2C2A' : edge;
+      ctx.lineWidth = isHover ? 3.2 : 1.8;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      if (showLabels) {
+        const cx = poly.corners2.reduce((s, c) => s + c[0], 0) / poly.corners2.length;
+        const cy = poly.corners2.reduce((s, c) => s + c[1], 0) / poly.corners2.length;
+        const front = state.visible[poly.key];
+        const px = fit.ox + cx * fit.scale;
+        const py = fit.oy + cy * fit.scale;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (front) {
+          ctx.font = '600 14px -apple-system, "PingFang SC", sans-serif';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+          ctx.strokeText(face, px, py);
+          ctx.fillStyle = '#2C2C2A';
+          ctx.fillText(face, px, py);
+        } else {
+          // 背面的面：淡色小字，仍能配对相对面但不喧宾夺主
+          ctx.font = '500 11px -apple-system, "PingFang SC", sans-serif';
+          ctx.fillStyle = 'rgba(70,70,70,0.55)';
+          ctx.fillText(face, px, py);
+        }
+      }
+    }
+
+    // 被挡住的那个相对面：虚线勾出轮廓（画在所有面之上才看得见）
+    if (state.hoverPair && state.t > 0.9) {
+      const pair = polys.find(p => p.key === state.hoverPair);
+      if (pair) {
+        const face = state.faces[pair.key] || '前';
+        ctx.beginPath();
+        pair.corners2.forEach((c, i) => {
+          const sx = fit.ox + c[0] * fit.scale;
+          const sy = fit.oy + c[1] * fit.scale;
+          if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        });
+        ctx.closePath();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = FACE_EDGE[face] || '#888';
+        ctx.lineWidth = 2.4;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    updateHint();
+  }
+
+  function updateHint() {
+    // 折好后鼠标停在某一面上：直接说出"这一面"和"被它挡住的对面"
+    if (state.hover && state.t >= 0.9) {
+      const face = state.faces[state.hover];
+      const oppFace = OPPOSITE[face];
+      hintEl.style.color = FACE_EDGE[face] || '#3A3A3A';
+      hintEl.textContent = `这一面是「${face}」${COLOR_NAME[face] || ''}　·　被它挡住的对面是「${oppFace}」${COLOR_NAME[oppFace] || ''}`;
+      return;
+    }
+    if (state.t >= 0.999) {
+      if (state.illegal) {
+        hintEl.textContent = '折不起来！有面重叠了——它不是正方体的展开图';
+        hintEl.style.color = '#B0472E';
+      } else {
+        hintEl.textContent = '折好啦！把鼠标移到任意一面上，看看它的对面藏在哪';
+        hintEl.style.color = '#5C8A2F';
+      }
+    } else {
+      hintEl.style.color = '#3A3A3A';
+      hintEl.textContent = state.illegal
+        ? '拖动滑杆试试：它真的能折成一个正方体吗？'
+        : '拖动滑杆，把这张纸折成一个正方体';
+    }
+  }
+
+  // ---------- 缩略图 ----------
+  function drawThumb(canvas, net) {
+    const size = 64;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const c = canvas.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const xs = net.cells.map(p => p.x), ys = net.cells.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const bw = maxX - minX + 1, bh = maxY - minY + 1;
+    const cell = Math.min((size - 12) / bw, (size - 12) / bh);
+    const offX = (size - bw * cell) / 2, offY = (size - bh * cell) / 2;
+
+    const root = CubeNet.findRoot(net.cells);
+    const faces = CubeNet.deriveFaces(CubeNet.foldGeometry(net.cells, root, 1));
+
+    for (const p of net.cells) {
+      const face = faces[CubeNet.keyOf(p.x, p.y)] || '前';
+      const sx = offX + (p.x - minX) * cell;
+      const sy = offY + (maxY - p.y) * cell;
+      c.fillStyle = FACE_COLORS[face] || '#ddd';
+      c.strokeStyle = FACE_EDGE[face] || '#888';
+      c.lineWidth = 1;
+      c.fillRect(sx + 0.5, sy + 0.5, cell - 1, cell - 1);
+      c.strokeRect(sx + 0.5, sy + 0.5, cell - 1, cell - 1);
+    }
+  }
+
+  function buildPicker() {
+    buildGroup(netsEl, CubeNet.NETS, false);
+    buildGroup(illegalEl, CubeNet.ILLEGAL_NETS, true);
+  }
+
+  function buildGroup(container, nets, illegal) {
+    container.innerHTML = '';
+    for (const net of nets) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'net-btn' + (illegal ? ' illegal' : '');
+      const canvas = document.createElement('canvas');
+      drawThumb(canvas, net);
+      const name = document.createElement('span');
+      name.className = 'net-name';
+      name.textContent = net.name;
+      btn.appendChild(canvas);
+      btn.appendChild(name);
+      btn.addEventListener('click', () => {
+        selectNet(net, illegal);
+        markActive();
+      });
+      container.appendChild(btn);
+      btn._net = net;
+    }
+  }
+
+  function markActive() {
+    for (const btn of netsEl.querySelectorAll('.net-btn')) {
+      btn.classList.toggle('active', btn._net === state.net && !state.illegal);
+    }
+    for (const btn of illegalEl.querySelectorAll('.net-btn')) {
+      btn.classList.toggle('active', btn._net === state.net && state.illegal);
+    }
+  }
+
+  function selectNet(net, illegal) {
+    state.net = net;
+    state.illegal = !!illegal;
+    state.root = CubeNet.findRoot(net.cells);
+    const folded1 = CubeNet.foldGeometry(net.cells, state.root, 1);
+    state.faces = CubeNet.deriveFaces(folded1);
+
+    // 预判每个面折叠完成后是否朝向观察者（观察方向 1,1,1）
+    const keys = Object.keys(folded1);
+    const mid = [0, 0, 0];
+    for (const k of keys) {
+      const c = folded1[k].center;
+      mid[0] += c[0]; mid[1] += c[1]; mid[2] += c[2];
+    }
+    mid[0] /= keys.length; mid[1] /= keys.length; mid[2] /= keys.length;
+    state.visible = {};
+    for (const k of keys) {
+      const c = folded1[k].center;
+      const sum = (c[0] - mid[0]) + (c[1] - mid[1]) + (c[2] - mid[2]);
+      state.visible[k] = sum > 0.05;
+    }
+
+    state.t = 0;
+    state.hover = null;
+    state.hoverPair = null;
+    foldSlider.value = 0;
+    computeFit();
+    render();
+  }
+
+  // ---------- 事件 ----------
+  foldSlider.addEventListener('input', () => {
+    state.t = parseFloat(foldSlider.value);
+    // 折叠过程中几何在变，悬停高亮先清掉（半折状态下"遮挡"还会变）
+    if (state.t < 0.9) { state.hover = null; state.hoverPair = null; }
+    render();
+  });
+
+  let dragging = false;
+  cv.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    cv.setPointerCapture(e.pointerId);
+    setTFromPointer(e);
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (dragging) { setTFromPointer(e); return; }
+    updateHover(e);
+  });
+  cv.addEventListener('pointerup', (e) => {
+    dragging = false;
+    updateHover(e);
+  });
+  cv.addEventListener('pointercancel', () => { dragging = false; });
+  cv.addEventListener('pointerleave', () => setHover(null));
+
+  function setTFromPointer(e) {
+    const rect = cv.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    state.t = Math.max(0, Math.min(1, ratio));
+    if (state.t < 0.9) { state.hover = null; state.hoverPair = null; }
+    foldSlider.value = state.t;
+    render();
+  }
+
+  showFaces.addEventListener('change', render);
+  window.addEventListener('resize', resizeCanvas);
+
+  // 调试/测试钩子：只读，供自动化验证遮挡命中是否正确
+  window.__getHover = () => ({ hover: state.hover, pair: state.hoverPair, t: state.t });
+  window.__faceCenters = () => {
+    const folded = CubeNet.foldGeometry(state.net.cells, state.root, state.t);
+    const out = {};
+    for (const k of Object.keys(folded)) {
+      const c = folded[k].center;
+      const p = CubeNet.project(c, 0, 0, 1);
+      out[k] = {
+        face: state.faces[k],
+        x: fit.ox + p[0] * fit.scale,
+        y: fit.oy + p[1] * fit.scale,
+        depth: CubeNet.depthOf(c)
+      };
+    }
+    return out;
+  };
+
+  // ---------- 启动 ----------
+  selectNet(CubeNet.NETS[0], false);
+  buildPicker();
+  markActive();
+  resizeCanvas();
+})();
+
+  </script>
+</body>
+</html>
