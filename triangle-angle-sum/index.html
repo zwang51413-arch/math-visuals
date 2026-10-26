@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>三角形内角和：箭头走一圈</title>
+  <style>
+:root {
+  --bg: #FBF7F6;
+  --card: #FFFFFF;
+  --ink: #3A3A3A;
+  --muted: #8A7F80;
+  --pink: #D4537E;
+  --pink-deep: #993556;
+  --line: #F0E4E6;
+  --teal: #1D9E75;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.head {
+  padding: 20px 20px 4px;
+  text-align: center;
+}
+.head h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.head .sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 32px;
+}
+
+.stage {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: 0 6px 24px rgba(153, 53, 86, 0.06);
+}
+#cv {
+  display: block;
+  width: 100%;
+  height: 560px;
+  touch-action: none;
+  cursor: grab;
+}
+#cv:active { cursor: grabbing; }
+
+.hint {
+  margin: 10px 4px 2px;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: center;
+  min-height: 20px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-top: 12px;
+  padding: 14px 16px 12px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.slider-label {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 6px;
+  background: #F4D8E2;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(153, 53, 86, 0.4);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(153, 53, 86, 0.4);
+  cursor: pointer;
+}
+
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.btns button {
+  flex: 1 1 0;
+  min-width: 84px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.btns button:active { transform: scale(0.97); }
+.btns button.primary {
+  background: var(--pink);
+  border-color: var(--pink);
+  color: #fff;
+  font-weight: 600;
+}
+.btns button.active {
+  border-color: var(--pink);
+  background: #FDF1F5;
+  color: var(--pink-deep);
+}
+
+.tip {
+  margin: 10px 2px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .wrap { padding: 10px 10px 24px; }
+  #cv { height: 470px; }
+  .btns button { min-width: 72px; padding: 9px 10px; font-size: 13px; }
+}
+
+  </style>
+</head>
+<body>
+  <header class="head">
+    <h1>三角形内角和</h1>
+    <p class="sub">箭头沿边走一圈，三个角刚好拼成 180°</p>
+  </header>
+
+  <main class="wrap">
+    <section class="stage">
+      <canvas id="cv" aria-label="三角形内角和演示"></canvas>
+      <p class="hint" id="hint" aria-live="polite">拖动滑杆，或点「走一圈」，看箭头沿着三角形走一圈</p>
+    </section>
+
+    <section class="panel">
+      <div class="slider-row">
+        <span class="slider-label">出发</span>
+        <input type="range" id="fold" min="0" max="1" step="0.001" value="0" aria-label="行走进度">
+        <span class="slider-label">回到原点</span>
+      </div>
+
+      <div class="btns">
+        <button type="button" id="play" class="primary">走一圈</button>
+        <button type="button" id="reset">重置</button>
+      </div>
+
+      <p class="tip">拖动上方三角形的顶点：形状怎么变，四个画面里的结论都不变</p>
+    </section>
+  </main>
+
+  <script>
+// 三角形内角和的几何内核（纯函数，不碰 DOM）
+// 主线：切向量沿边滑行，顶点处转过的角 = 外角 = 180° − 内角；走完一圈共转 360°。
+// 验证：三个内角撕下来拼成平角。
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Tri = api;
+})(typeof window !== 'undefined' ? window : globalThis, function () {
+  'use strict';
+
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  // 归一到 (-π, π]
+  function normalizeAngle(a) {
+    while (a > Math.PI) a -= TAU;
+    while (a <= -Math.PI) a += TAU;
+    return a;
+  }
+
+  function angleBetween(u, v) {
+    const nu = Math.hypot(u[0], u[1]) || 1;
+    const nv = Math.hypot(v[0], v[1]) || 1;
+    const d = clamp((u[0] * v[0] + u[1] * v[1]) / (nu * nv), -1, 1);
+    return Math.acos(d);
+  }
+
+  // 顶点 Q 处，QP 与 QR 的内角（0..π）
+  function angleAt(P, Q, R) {
+    return angleBetween(
+      [P[0] - Q[0], P[1] - Q[1]],
+      [R[0] - Q[0], R[1] - Q[1]]
+    );
+  }
+
+  // 三个内角（弧度），顺序对应顶点 0/1/2
+  function innerAngles(P) {
+    return [
+      angleAt(P[1], P[0], P[2]),
+      angleAt(P[0], P[1], P[2]),
+      angleAt(P[0], P[2], P[1])
+    ];
+  }
+
+  // 三条边的方向角（弧度）：0 = AB, 1 = BC, 2 = CA
+  function edgeDirs(P) {
+    return [
+      Math.atan2(P[1][1] - P[0][1], P[1][0] - P[0][0]),
+      Math.atan2(P[2][1] - P[1][1], P[2][0] - P[1][0]),
+      Math.atan2(P[0][1] - P[2][1], P[0][0] - P[2][0])
+    ];
+  }
+
+  // 时间轴：边段短（滑得快），顶点段长（转得慢而匀速）。
+  // 边段用 easeInOut 制造加速—减速的速度感；顶点段用 linear 匀速强调。
+  const SEGS = [
+    { kind: 'edge',   a: 0, b: 1, t0: 0.00, t1: 0.10 },
+    { kind: 'vertex', v: 1,       t0: 0.10, t1: 0.28 },
+    { kind: 'edge',   a: 1, b: 2, t0: 0.28, t1: 0.38 },
+    { kind: 'vertex', v: 2,       t0: 0.38, t1: 0.56 },
+    { kind: 'edge',   a: 2, b: 0, t0: 0.56, t1: 0.66 },
+    { kind: 'vertex', v: 0,       t0: 0.66, t1: 0.84 },
+    { kind: 'done',               t0: 0.84, t1: 1.00 }
+  ];
+
+  function easeInOut(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  // p ∈ [0,1] 为「时间进度」；返回箭头此刻的位置、朝向、所处阶段
+  function walkState(P, p) {
+    p = clamp(p, 0, 1);
+    const dirs = edgeDirs(P);
+    const angs = innerAngles(P);
+
+    for (let k = 0; k < SEGS.length; k++) {
+      const seg = SEGS[k];
+      if (p <= seg.t1 || k === SEGS.length - 1) {
+        const local = clamp((p - seg.t0) / (seg.t1 - seg.t0), 0, 1);
+
+        if (seg.kind === 'edge') {
+          const e = easeInOut(local);
+          const A = P[seg.a], B = P[seg.b];
+          return {
+            x: lerp(A[0], B[0], e),
+            y: lerp(A[1], B[1], e),
+            dir: dirs[seg.a],
+            phase: 'edge',
+            vertexIndex: seg.v === undefined ? -1 : seg.v,
+            localT: local,
+            turn: 0,
+            turnTotal: 0,
+            arcFrom: dirs[seg.a],
+            arcTo: dirs[seg.a],
+            innerAngle: 0,
+            outerAngle: 0
+          };
+        }
+
+        if (seg.kind === 'vertex') {
+          const inDir = dirs[(seg.v + 2) % 3]; // 进入该顶点的边的方向
+          const outDir = dirs[seg.v];          // 离开该顶点的边的方向
+          const turn = normalizeAngle(outDir - inDir);
+          return {
+            x: P[seg.v][0],
+            y: P[seg.v][1],
+            dir: inDir + turn * local,
+            phase: 'vertex',
+            vertexIndex: seg.v,
+            localT: local,
+            turn: turn * local,
+            turnTotal: turn,
+            arcFrom: inDir,
+            arcTo: inDir + turn,
+            innerAngle: angs[seg.v],
+            outerAngle: Math.abs(turn)
+          };
+        }
+
+        // done：停在起点，方向恢复为第一段边的方向
+        return {
+          x: P[0][0],
+          y: P[0][1],
+          dir: dirs[0],
+          phase: 'done',
+          vertexIndex: -1,
+          localT: 1,
+          turn: 0,
+          turnTotal: 0,
+          arcFrom: dirs[0],
+          arcTo: dirs[0],
+          innerAngle: 0,
+          outerAngle: 0
+        };
+      }
+    }
+  }
+
+  // 走完一圈后，三个转向角（外角）之和应为 360°
+  function outerAngles(P) {
+    const dirs = edgeDirs(P);
+    const out = [];
+    for (let v = 0; v < 3; v++) {
+      const inDir = dirs[(v + 2) % 3];
+      const outDir = dirs[v];
+      out.push(Math.abs(normalizeAngle(outDir - inDir)));
+    }
+    return out;
+  }
+
+  // 已到达的角块：按到达顺序依次排进目标区间
+  //   mode='outer'：外角拼整圆（0→2π，圆心在格子中心）
+  //   mode='inner'：内角拼半圆（π→2π，圆心在水平线上）
+  const TEAR_LINE_Y = 0.72;
+
+  function tearBlocks(P, mode, arrived) {
+    const isOuter = mode === 'outer';
+    const angs = innerAngles(P);
+    const O = isOuter ? [0.5, 0.50] : [0.5, TEAR_LINE_Y];
+    const blocks = [];
+    let acc = isOuter ? 0 : Math.PI;
+
+    for (const v of arrived) {
+      const span = isOuter ? Math.PI - angs[v] : angs[v];
+      blocks.push({ i: v, x: O[0], y: O[1], a1: acc, a2: acc + span, angle: span });
+      acc += span;
+    }
+
+    return { blocks, ox: O[0], oy: O[1], lineY: TEAR_LINE_Y, mode: isOuter ? 'outer' : 'inner' };
+  }
+
+  // 三个顶点的到达顺序（跟着「走」的顺序：B → C → A）
+  const VERTEX_ORDER = [1, 2, 0];
+
+  // 兼容旧调用：p 视作「全部到达」
+  function tearState(P, p, mode) {
+    return tearBlocks(P, mode, VERTEX_ORDER);
+  }
+
+  // 三角形是否仍成立（不退化）
+  function isAlive(P) {
+    const a = innerAngles(P);
+    return a.every(v => v > 0.09 && v < Math.PI - 0.09);
+  }
+
+  function anglesSum(P) {
+    return innerAngles(P).reduce((s, v) => s + v, 0);
+  }
+
+  return {
+    TAU,
+    clamp,
+    lerp,
+    normalizeAngle,
+    angleAt,
+    angleBetween,
+    innerAngles,
+    outerAngles,
+    edgeDirs,
+    SEGS,
+    easeInOut,
+    walkState,
+    tearState,
+    tearBlocks,
+    VERTEX_ORDER,
+    isAlive,
+    anglesSum,
+    TEAR_LINE_Y
+  };
+});
+
+  </script>
+  <script>
+(function () {
+  'use strict';
+  const Tri = window.Tri;
+
+  const H = 0.72 * Math.sqrt(3) / 2; // 等边三角形的高
+  const START = [
+    [0.5, 0.82 - H],
+    [0.14, 0.82],
+    [0.86, 0.82]
+  ];
+
+  // 三个内角的三色（色相拉开，避免黄-橙-粉同族）
+  const INK_COLORS = ['#E03C5A', '#3D7FD8', '#45B05C'];
+  // 拼图的角块与内角同色（浅填充 + 深描边），颜色能直接对上
+  const BLOCK_FILL = ['#F7C1C1', '#B5D4F4', '#C0DD97'];
+  const BLOCK_EDGE = ['#A32D2D', '#185FA5', '#3B6D11'];
+  const TEAL = '#0F6E56';
+  const TEAL_BRIGHT = '#1D9E75';
+  // 上方「走」占整行，下方三块：单顶点 / 拼外角 / 拼内角
+  const WALK_RATIO = 0.5;
+
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const foldSlider = document.getElementById('fold');
+  const hintEl = document.getElementById('hint');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+
+  const state = {
+    P: START.map(p => p.slice()),
+    p: 0
+  };
+
+  let cvW = 1, cvH = 1;
+  // 当前子视口的世界→屏幕映射
+  let F = { S: 1, ox: 0, oy: 0, w: 1, h: 1, x0: 0, y0: 0 };
+  const sx = x => F.ox + x * F.S;
+  const sy = y => F.oy + y * F.S;
+
+  const walkBand = () => Math.round(cvH * WALK_RATIO);
+
+  function fitFor(x0, y0, w, h) {
+    const S = Math.min(w, h) * 0.92;
+    return { S, ox: x0 + (w - S) / 2, oy: y0 + (h - S) / 2, w, h, x0, y0 };
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = cv.getBoundingClientRect();
+    cv.width = Math.max(1, Math.round(rect.width * dpr));
+    cv.height = Math.max(1, Math.round(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cvW = rect.width;
+    cvH = rect.height;
+    render();
+  }
+
+  // ---------- 基础绘制 ----------
+  function dirTo(from, to) {
+    return Math.atan2(to[1] - from[1], to[0] - from[0]);
+  }
+
+  function tracePoly(P) {
+    ctx.beginPath();
+    P.forEach((p, i) => { if (i === 0) ctx.moveTo(sx(p[0]), sy(p[1])); else ctx.lineTo(sx(p[0]), sy(p[1])); });
+    ctx.closePath();
+  }
+
+  function drawCaption(text) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(58,58,58,0.52)';
+    ctx.font = '600 12px -apple-system, "PingFang SC", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, F.x0 + 10, F.y0 + 8);
+    ctx.restore();
+  }
+
+  function drawTriangle() {
+    tracePoly(state.P);
+    ctx.fillStyle = '#FDF1F5';
+    ctx.fill();
+    ctx.strokeStyle = '#E3A8BE';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  function drawInnerArcs() {
+    const angs = Tri.innerAngles(state.P);
+    for (let v = 0; v < 3; v++) {
+      const Q = state.P[v];
+      const d1 = dirTo(Q, state.P[(v + 1) % 3]);
+      const d2 = dirTo(Q, state.P[(v + 2) % 3]);
+      const diff = Tri.normalizeAngle(d2 - d1);
+      const r = 0.058 * F.S;
+
+      ctx.beginPath();
+      ctx.arc(sx(Q[0]), sy(Q[1]), r, d1, d1 + diff, diff < 0);
+      ctx.strokeStyle = INK_COLORS[v];
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const bis = d1 + diff / 2;
+      const lr = 0.115 * F.S;
+      ctx.fillStyle = INK_COLORS[v];
+      ctx.font = '500 13px -apple-system, "PingFang SC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(Math.round(angs[v] * 180 / Math.PI) + '°',
+        sx(Q[0]) + Math.cos(bis) * lr,
+        sy(Q[1]) + Math.sin(bis) * lr);
+    }
+  }
+
+  function drawArrow(x, y, dir, len) {
+    len = len || 0.16;
+    const head = Math.min(0.055, len * 0.42);
+    const spread = 0.52;
+    const ex = x + Math.cos(dir) * len;
+    const ey = y + Math.sin(dir) * len;
+
+    ctx.strokeStyle = TEAL;
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sx(x), sy(y));
+    ctx.lineTo(sx(ex), sy(ey));
+    ctx.stroke();
+
+    const a1 = dir + Math.PI - spread;
+    const a2 = dir + Math.PI + spread;
+    ctx.beginPath();
+    ctx.moveTo(sx(ex + Math.cos(a1) * head), sy(ey + Math.sin(a1) * head));
+    ctx.lineTo(sx(ex), sy(ey));
+    ctx.lineTo(sx(ex + Math.cos(a2) * head), sy(ey + Math.sin(a2) * head));
+    ctx.stroke();
+  }
+
+  // 顶点转向的「初始朝向」：虚线虚影箭头，让外角有两条边夹着，角才完整
+  function drawInitialDir(x, y, dir, len) {
+    const head = 0.042;
+    const spread = 0.5;
+    const ex = x + Math.cos(dir) * len;
+    const ey = y + Math.sin(dir) * len;
+
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = 'rgba(15,110,86,0.62)';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sx(x), sy(y));
+    ctx.lineTo(sx(ex), sy(ey));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const a1 = dir + Math.PI - spread;
+    const a2 = dir + Math.PI + spread;
+    ctx.beginPath();
+    ctx.moveTo(sx(ex + Math.cos(a1) * head), sy(ey + Math.sin(a1) * head));
+    ctx.lineTo(sx(ex), sy(ey));
+    ctx.lineTo(sx(ex + Math.cos(a2) * head), sy(ey + Math.sin(a2) * head));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawOuterArc(w) {
+    const r = 0.10 * F.S;
+    const end = w.arcFrom + w.turn;
+    ctx.beginPath();
+    ctx.arc(sx(w.x), sy(w.y), r, w.arcFrom, end, w.turnTotal < 0);
+    ctx.strokeStyle = TEAL_BRIGHT;
+    ctx.lineWidth = 3.6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    const mid = w.arcFrom + w.turn / 2;
+    const lr = 0.145 * F.S;
+    ctx.fillStyle = TEAL;
+    ctx.font = '600 13px -apple-system, "PingFang SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // 标的是这个顶点的外角总值，不是「已转了多少」
+    ctx.fillText(Math.round(w.outerAngle * 180 / Math.PI) + '°',
+      sx(w.x) + Math.cos(mid) * lr,
+      sy(w.y) + Math.sin(mid) * lr);
+  }
+
+  function drawKnob(p, active) {
+    ctx.beginPath();
+    ctx.arc(sx(p[0]), sy(p[1]), 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = active ? TEAL : '#D4537E';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+  }
+
+  const VERTEX_SEGS = [[0.10, 0.28, 1], [0.38, 0.56, 2], [0.66, 0.84, 0]];
+  function totalTurn(P, p) {
+    const outer = Tri.outerAngles(P);
+    let sum = 0;
+    for (const [t0, t1, v] of VERTEX_SEGS) {
+      if (p >= t1) sum += outer[v];
+      else if (p > t0) sum += outer[v] * ((p - t0) / (t1 - t0));
+    }
+    return sum;
+  }
+
+  // 顶点调度：② 显示哪个顶点、③④ 已到达哪些、当前块飞到几成
+  const FLY_FROM = 0.55; // 顶点段内：前 55% 展示，后 45% 飞走
+
+  function vertexWindow(p) {
+    for (const [t0, t1, v] of VERTEX_SEGS) {
+      if (p < t1) return { t0, t1, v };
+    }
+    return null;
+  }
+
+  function arrivedVertices(p) {
+    const out = [];
+    for (const [t0, t1, v] of VERTEX_SEGS) if (p >= t1) out.push(v);
+    return out;
+  }
+
+  function flyProgress(p) {
+    const w = vertexWindow(p);
+    if (!w) return null;
+    const flyStart = w.t0 + (w.t1 - w.t0) * FLY_FROM;
+    if (p <= flyStart) return { w, k: 0 };
+    return { w, k: Math.min(1, (p - flyStart) / (w.t1 - flyStart)) };
+  }
+
+  function drawTurnBadge(P, p) {
+    const deg = Math.round(totalTurn(P, p) * 180 / Math.PI);
+    ctx.fillStyle = TEAL;
+    ctx.font = '600 14px -apple-system, "PingFang SC", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText('已转 ' + deg + '°', F.x0 + F.w - 12, F.y0 + 10);
+    ctx.fillStyle = 'rgba(15,110,86,0.5)';
+    ctx.font = '500 11px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('一圈 360°', F.x0 + F.w - 12, F.y0 + 30);
+  }
+
+  function drawSumLine(P, done) {
+    const a = Tri.innerAngles(P).map(v => Math.round(v * 180 / Math.PI));
+    const cx = F.x0 + F.w / 2;
+    const by = F.y0 + F.h - 8;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    if (done) {
+      ctx.fillStyle = '#0C447C';
+      ctx.font = '600 14px -apple-system, "PingFang SC", sans-serif';
+      ctx.fillText(`∠A+∠B+∠C = ${a[0]}°+${a[1]}°+${a[2]}° = 180°`, cx, by);
+    } else {
+      ctx.fillStyle = 'rgba(58,58,58,0.45)';
+      ctx.font = '500 11px -apple-system, "PingFang SC", sans-serif';
+      ctx.fillText(`∠A ${a[0]}°　∠B ${a[1]}°　∠C ${a[2]}°`, cx, by);
+    }
+  }
+
+  // ---------- 视图 1：沿边走 ----------
+  function drawWalk() {
+    const P = state.P;
+    const w = Tri.walkState(P, state.p);
+
+    drawCaption('① 沿边走');
+    drawTriangle();
+    drawInnerArcs();
+    if (w.phase === 'vertex') {
+      drawInitialDir(w.x, w.y, w.arcFrom, 0.15);
+      drawOuterArc(w);
+    }
+    drawArrow(w.x, w.y, w.dir, w.phase === 'vertex' ? 0.105 : 0.16);
+    for (let v = 0; v < 3; v++) drawKnob(P[v], w.phase === 'vertex' && w.vertexIndex === v);
+
+    drawTurnBadge(P, state.p);
+    drawSumLine(P, state.p >= 0.999);
+  }
+
+  // ---------- 视图 2：同一顶点，内角 + 外角 = 180° ----------
+  function drawVertexPair() {
+    const w = vertexWindow(state.p);
+    const v = w ? w.v : 0;
+    const label = ['A', 'B', 'C'][v];
+    drawCaption(`② ${label} 点：内角 + 外角 = 180°`);
+
+    const P = state.P;
+    const inner = Tri.angleAt(P[(v + 1) % 3], P[v], P[(v + 2) % 3]);
+    const outer = Math.PI - inner;
+
+    const cx = 0.5;
+    const cy = 0.74;
+    const R = 0.34;
+
+    // 飞走时把这两块淡出，表示它们被送到右边去了
+    const fp = flyProgress(state.p);
+    const fade = fp ? fp.k : 0;
+    const alpha = 0.6 * (1 - fade * 0.82);
+
+    // 平角的底边：一条直线
+    ctx.beginPath();
+    ctx.moveTo(sx(cx - R - 0.02), sy(cy));
+    ctx.lineTo(sx(cx + R + 0.02), sy(cy));
+    ctx.strokeStyle = '#C9B4BA';
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+
+    // 内角（右，0 → −inner）与外角（左，−inner → −π）拼成上半平角
+    // 同用该顶点的颜色：内角实、外角淡，既区分两个角，又能看出同属一个顶点
+    drawSector(cx, cy, R, 0, -inner, BLOCK_FILL[v], BLOCK_EDGE[v], alpha);
+    drawSector(cx, cy, R, -inner, -Math.PI, BLOCK_FILL[v], BLOCK_EDGE[v], alpha * 0.48);
+
+    ctx.beginPath();
+    ctx.arc(sx(cx), sy(cy), 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#8A7F80';
+    ctx.fill();
+
+    const rr = R * 0.62;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 12px -apple-system, "PingFang SC", sans-serif';
+
+    const midIn = -inner / 2;
+    ctx.fillStyle = BLOCK_EDGE[v];
+    ctx.fillText(Math.round(inner * 180 / Math.PI) + '°',
+      sx(cx + Math.cos(midIn) * rr), sy(cy + Math.sin(midIn) * rr));
+
+    const midOut = -(inner + outer / 2);
+    ctx.fillStyle = BLOCK_EDGE[v];
+    ctx.fillText(Math.round(outer * 180 / Math.PI) + '°',
+      sx(cx + Math.cos(midOut) * rr), sy(cy + Math.sin(midOut) * rr));
+
+    ctx.fillStyle = '#0C447C';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('内角 + 外角 = 180°', F.x0 + F.w / 2, F.y0 + F.h - 8);
+  }
+
+  // ---------- 视图 3/4：拼外角（整圆）/ 拼内角（半圆） ----------
+  function drawSector(cx, cy, r, a1, a2, fill, edge, alpha) {
+    const scx = sx(cx), scy = sy(cy), sr = r * F.S;
+    ctx.beginPath();
+    ctx.moveTo(scx, scy);
+    ctx.arc(scx, scy, sr, a1, a2, a2 < a1);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.globalAlpha = alpha === undefined ? 0.6 : alpha;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.4;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  function drawTear(mode) {
+    const isOuter = mode === 'outer';
+    drawCaption(isOuter ? '③ 拼外角 · 走一圈转的角' : '④ 拼内角');
+
+    // 整体上移一点，给下方 / 中心留出拼的场地
+    const P = state.P.map(p => [p[0], p[1] - 0.12]);
+    const t = Tri.tearBlocks(P, mode, arrivedVertices(state.p));
+
+    if (!isOuter) {
+      // 内角拼半圆：平角基线
+      ctx.beginPath();
+      ctx.moveTo(sx(0.07), sy(t.lineY));
+      ctx.lineTo(sx(0.93), sy(t.lineY));
+      ctx.strokeStyle = '#C9B4BA';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    } else {
+      // 外角拼整圆：虚线外圈，让「拼满一圈」有参照
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(sx(t.ox), sy(t.oy), 0.36 * F.S, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(180,140,152,0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.beginPath();
+    ctx.arc(sx(t.ox), sy(t.oy), 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#8A7F80';
+    ctx.fill();
+
+    const R = 0.36;
+    for (const b of t.blocks) {
+      drawSector(b.x, b.y, R, b.a1, b.a2, BLOCK_FILL[b.i], BLOCK_EDGE[b.i]);
+
+      const mid = (b.a1 + b.a2) / 2;
+      const lr = R * 0.6 * F.S;
+      ctx.fillStyle = BLOCK_EDGE[b.i];
+      ctx.font = '600 12px -apple-system, "PingFang SC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(Math.round(b.angle * 180 / Math.PI) + '°',
+        sx(b.x) + Math.cos(mid) * lr,
+        sy(b.y) + Math.sin(mid) * lr);
+    }
+
+    const done = state.p > 0.985;
+    const cx = F.x0 + F.w / 2;
+    const by = F.y0 + F.h - 8;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    if (done) {
+      ctx.fillStyle = '#0C447C';
+      ctx.font = '600 13px -apple-system, "PingFang SC", sans-serif';
+      ctx.fillText(isOuter ? '拼成整圆 = 360°' : '拼成平角 = 180°', cx, by);
+    } else {
+      ctx.fillStyle = 'rgba(58,58,58,0.42)';
+      ctx.font = '500 11px -apple-system, "PingFang SC", sans-serif';
+      ctx.fillText(isOuter ? `外角 ${t.blocks.length}/3` : `内角 ${t.blocks.length}/3`, cx, by);
+    }
+  }
+
+  // ---------- 飞行层：当前顶点的两块，从 ② 分头飞到 ③ / ④ ----------
+  function drawFlySector(fFrom, cx, cy, R, a1, a2, fTo, tgt, k, fill, edge) {
+    const x0 = fFrom.ox + cx * fFrom.S;
+    const y0 = fFrom.oy + cy * fFrom.S;
+    const r0 = R * fFrom.S;
+
+    const x1 = fTo.ox + tgt.x * fTo.S;
+    const y1 = fTo.oy + tgt.y * fTo.S;
+    const r1 = 0.36 * fTo.S;
+
+    const kk = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    const px = x0 + (x1 - x0) * kk;
+    const py = y0 + (y1 - y0) * kk;
+    const pr = r0 + (r1 - r0) * kk;
+
+    // 用「中心角 + 固定张开角」插值：只平移 + 旋转，张开角不变，
+    // 落位瞬间的扇形与「已到达」块完全同形，不会因为跨 2π 翻成另一侧。
+    const span = Math.abs(a2 - a1);
+    const c0 = (a1 + a2) / 2;
+    const c1 = (tgt.a1 + tgt.a2) / 2;
+    const c = c0 + Tri.normalizeAngle(c1 - c0) * kk;
+    const pa1 = c - span / 2;
+    const pa2 = c + span / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.arc(px, py, pr, pa1, pa2, pa2 < pa1);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.globalAlpha = 0.6;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  function drawFlying() {
+    const fp = flyProgress(state.p);
+    if (!fp || fp.k <= 0 || fp.k >= 1) return;
+
+    const v = fp.w.v;
+    const k = fp.k;
+    const P = state.P;
+    const PShift = P.map(p => [p[0], p[1] - 0.12]);
+    const inner = Tri.angleAt(P[(v + 1) % 3], P[v], P[(v + 2) % 3]);
+
+    const rowH = cvH / 2;
+    const thirdW = cvW / 3;
+    const F2 = fitFor(0, rowH, thirdW, rowH);
+    const F3 = fitFor(thirdW, rowH, thirdW, rowH);
+    const F4 = fitFor(thirdW * 2, rowH, thirdW, rowH);
+
+    const list = arrivedVertices(state.p).concat([v]);
+    const t3 = Tri.tearBlocks(PShift, 'outer', list);
+    const t4 = Tri.tearBlocks(PShift, 'inner', list);
+    const tgtOuter = t3.blocks[t3.blocks.length - 1];
+    const tgtInner = t4.blocks[t4.blocks.length - 1];
+
+    const cx2 = 0.5, cy2 = 0.74, R2 = 0.34;
+
+    // 外角：② 左半 → ③；内角：② 右半 → ④
+    drawFlySector(F2, cx2, cy2, R2, -inner, -Math.PI, F3, tgtOuter, k, BLOCK_FILL[v], BLOCK_EDGE[v]);
+    drawFlySector(F2, cx2, cy2, R2, 0, -inner, F4, tgtInner, k, BLOCK_FILL[v], BLOCK_EDGE[v]);
+  }
+
+  // ---------- 渲染：四个子视口同屏 ----------
+  function render() {
+    ctx.clearRect(0, 0, cvW, cvH);
+
+    const rowH = cvH / 2;
+    const thirdW = cvW / 3;
+
+    // ① 沿边走：上排整行
+    F = fitFor(0, 0, cvW, rowH);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, cvW, rowH); ctx.clip();
+    drawWalk();
+    ctx.restore();
+
+    // ② 同一顶点：内角 + 外角 = 180°
+    F = fitFor(0, rowH, thirdW, rowH);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, rowH, thirdW, rowH); ctx.clip();
+    drawVertexPair();
+    ctx.restore();
+
+    // ③ 拼外角：整圆 360°
+    F = fitFor(thirdW, rowH, thirdW, rowH);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(thirdW, rowH, thirdW, rowH); ctx.clip();
+    drawTear('outer');
+    ctx.restore();
+
+    // ④ 拼内角：半圆 180°
+    F = fitFor(thirdW * 2, rowH, thirdW, rowH);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(thirdW * 2, rowH, thirdW, rowH); ctx.clip();
+    drawTear('inner');
+    ctx.restore();
+
+    // 飞行中的角块（跨子视口，画在最上层）
+    drawFlying();
+
+    updateHint();
+  }
+
+  // ---------- 提示 ----------
+  function updateHint() {
+    const w = Tri.walkState(state.P, state.p);
+
+    if (w.phase === 'vertex') {
+      hintEl.style.color = TEAL;
+      hintEl.textContent = '到顶点了：箭头转一个外角，右边两个拼图也在同步拼';
+    } else if (w.phase === 'done' || state.p >= 0.999) {
+      hintEl.style.color = '#0C447C';
+      hintEl.textContent = '每个顶点内角+外角=180°，三个顶点共 540°；走一圈用掉 360°，剩下 180° 就是三个内角';
+    } else if (state.p <= 0.001) {
+      hintEl.style.color = '#3A3A3A';
+      hintEl.textContent = '点「走一圈」，三个画面一起动：箭头沿边走，外角拼成整圆、内角拼成平角';
+    } else {
+      hintEl.style.color = '#3A3A3A';
+      hintEl.textContent = '箭头沿边滑行，三个画面同步推进';
+    }
+  }
+
+  // ---------- 播放 ----------
+  let raf = null;
+  let playing = false;
+
+  function stopPlay() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = null;
+    playing = false;
+  }
+
+  function play() {
+    if (playing) return;
+    if (state.p >= 0.999) state.p = 0;
+    playing = true;
+    let last = performance.now();
+    const dur = 5600;
+    const step = now => {
+      const dt = now - last;
+      last = now;
+      state.p = Math.min(1, state.p + dt / dur);
+      foldSlider.value = state.p;
+      render();
+      if (state.p < 1) raf = requestAnimationFrame(step);
+      else { playing = false; raf = null; }
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  // ---------- 交互 ----------
+  function walkFit() {
+    return fitFor(0, 0, cvW, walkBand());
+  }
+
+  function toWorld(e) {
+    const rect = cv.getBoundingClientRect();
+    const f = walkFit();
+    return [
+      (e.clientX - rect.left - f.ox) / f.S,
+      (e.clientY - rect.top - f.oy) / f.S
+    ];
+  }
+
+  function hitKnob(pt) {
+    const S = walkFit().S;
+    let best = -1;
+    let bestD = Infinity;
+    for (let i = 0; i < 3; i++) {
+      const dx = (pt[0] - state.P[i][0]) * S;
+      const dy = (pt[1] - state.P[i][1]) * S;
+      const d = Math.hypot(dx, dy);
+      if (d < 26 && d < bestD) { best = i; bestD = d; }
+    }
+    return best;
+  }
+
+  let dragIdx = -1;
+
+  cv.addEventListener('pointerdown', e => {
+    const rect = cv.getBoundingClientRect();
+    // 只有上方「走」的区域可以拖顶点，下方拼图区不响应
+    if (e.clientY - rect.top > walkBand()) return;
+    const idx = hitKnob(toWorld(e));
+    if (idx >= 0) {
+      dragIdx = idx;
+      stopPlay();
+      try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+  });
+
+  cv.addEventListener('pointermove', e => {
+    if (dragIdx < 0) return;
+    const pt = toWorld(e);
+    const next = state.P.map(p => p.slice());
+    next[dragIdx] = [
+      Math.max(0.06, Math.min(0.94, pt[0])),
+      Math.max(0.06, Math.min(0.94, pt[1]))
+    ];
+    if (Tri.isAlive(next)) {
+      state.P = next;
+      render();
+    }
+  });
+
+  function endDrag() { dragIdx = -1; }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+
+  foldSlider.addEventListener('input', () => {
+    stopPlay();
+    state.p = parseFloat(foldSlider.value);
+    render();
+  });
+
+  playBtn.addEventListener('click', () => {
+    stopPlay();
+    state.p = 0;
+    foldSlider.value = 0;
+    render();
+    play();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    state.P = START.map(p => p.slice());
+    state.p = 0;
+    stopPlay();
+    foldSlider.value = 0;
+    render();
+  });
+
+  window.addEventListener('resize', resize);
+
+  // ---------- 测试钩子 ----------
+  window.__tri = {
+    get state() { return { P: state.P.map(p => p.slice()), p: state.p }; },
+    angles: () => Tri.innerAngles(state.P).map(v => v * 180 / Math.PI),
+    outer: () => Tri.outerAngles(state.P).map(v => v * 180 / Math.PI),
+    totalTurn: () => totalTurn(state.P, state.p) * 180 / Math.PI,
+    walk: () => {
+      const w = Tri.walkState(state.P, state.p);
+      return { phase: w.phase, vertexIndex: w.vertexIndex, x: w.x, y: w.y, outerAngle: w.outerAngle * 180 / Math.PI };
+    },
+    setP: v => { state.p = v; foldSlider.value = v; render(); },
+    setVertex: (i, x, y) => {
+      const next = state.P.map(p => p.slice());
+      next[i] = [x, y];
+      if (Tri.isAlive(next)) { state.P = next; render(); return true; }
+      return false;
+    },
+    toScreen: (x, y) => {
+      const r = cv.getBoundingClientRect();
+      const f = walkFit();
+      return { x: r.left + f.ox + x * f.S, y: r.top + f.oy + y * f.S };
+    },
+    debugFly: () => {
+      const rowH = cvH / 2, thirdW = cvW / 3;
+      const PShift = state.P.map(p => [p[0], p[1] - 0.12]);
+      const F3 = fitFor(thirdW, rowH, thirdW, rowH);
+      const F4 = fitFor(thirdW * 2, rowH, thirdW, rowH);
+      const arr = arrivedVertices(state.p);
+      const fp = flyProgress(state.p);
+      const out = { p: state.p, arr, fly: null, landed: [] };
+      if (fp && fp.k > 0 && fp.k < 1) {
+        const v = fp.w.v;
+        const b3 = Tri.tearBlocks(PShift, 'outer', arr.concat([v])).blocks;
+        const b4 = Tri.tearBlocks(PShift, 'inner', arr.concat([v])).blocks;
+        const o = b3[b3.length - 1], i2 = b4[b4.length - 1];
+        out.fly = {
+          v,
+          outer: { x: F3.ox + o.x * F3.S, y: F3.oy + o.y * F3.S, r: 0.36 * F3.S, a1: o.a1, a2: o.a2 },
+          inner: { x: F4.ox + i2.x * F4.S, y: F4.oy + i2.y * F4.S, r: 0.36 * F4.S, a1: i2.a1, a2: i2.a2 }
+        };
+      }
+      out.landed = Tri.tearBlocks(PShift, 'outer', arr).blocks.map(b => ({
+        i: b.i, x: F3.ox + b.x * F3.S, y: F3.oy + b.y * F3.S, r: 0.36 * F3.S, a1: b.a1, a2: b.a2
+      }));
+      return out;
+    }
+  };
+
+  // ---------- 启动 ----------
+  resize();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => resize());
+  }
+})();
+
+  </script>
+</body>
+</html>
