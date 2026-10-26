@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF7F6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="平行四边形面积：剪一刀拼成矩形，看出底乘高">
+  <title>平行四边形面积：剪一刀拼成矩形</title>
+  <style>
+:root {
+  --bg: #FBF7F6;
+  --card: #FFFFFF;
+  --ink: #3A3A3A;
+  --muted: #8A7F80;
+  --pink: #D4537E;
+  --pink-deep: #993556;
+  --line: #F0E4E6;
+  --radius: 16px;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.head {
+  padding: calc(20px + var(--sat)) 20px 4px;
+  text-align: center;
+}
+.head h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.head .sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px calc(28px + var(--sab));
+}
+
+.stage {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: 0 6px 24px rgba(153, 53, 86, 0.06);
+}
+
+/* 五步进度：细长、低干扰，只做“走到哪了”的提示 */
+.track {
+  height: 4px;
+  margin: 2px 2px 10px;
+  background: #FBEEF3;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.track i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pink), var(--pink-deep));
+  transition: width 0.45s ease;
+}
+
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: clamp(320px, 52vh, 440px);
+}
+#cv {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: default;
+}
+#labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.klabel {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-size: 16px;
+  color: var(--ink);
+  text-shadow: 0 0 6px #fff, 0 0 10px #fff;
+}
+.klabel.dim { font-size: 15px; color: var(--muted); }
+.klabel i {
+  font-family: Georgia, "Times New Roman", "Songti SC", serif;
+  font-style: italic;
+  font-size: 1.08em;
+}
+.klabel.formula {
+  font-size: 16px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 12px;
+  text-shadow: none;
+  box-shadow: 0 2px 10px rgba(153, 53, 86, 0.1);
+}
+
+.hint {
+  margin: 10px 4px 2px;
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 20px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-top: 12px;
+  padding: 14px 16px;
+}
+
+.msg {
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: center;
+  min-height: 1.6em;
+}
+
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btns button {
+  flex: 1 1 0;
+  min-width: 84px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.btns button:active { transform: scale(0.97); }
+.btns button.primary {
+  background: var(--pink);
+  border-color: var(--pink);
+  color: #fff;
+  font-weight: 600;
+}
+.btns button.primary:active { background: var(--pink-deep); }
+.btns button[hidden] { display: none; }
+
+@media (hover: hover) {
+  .btns button:hover { border-color: #E6C6D2; background: #FDF7F9; }
+  .btns button.primary:hover { border-color: var(--pink); background: #C9436F; color: #fff; }
+}
+
+@media (max-width: 480px) {
+  .head { padding-top: calc(14px + var(--sat)); }
+  .head h1 { font-size: 20px; }
+  .wrap { padding: 10px 10px calc(22px + var(--sab)); }
+  .canvas-wrap { height: clamp(300px, 46vh, 380px); }
+  .btns button { min-width: 72px; padding: 9px 10px; font-size: 13.5px; }
+}
+
+  </style>
+</head>
+<body>
+  <header class="head">
+    <h1>平行四边形面积</h1>
+    <p class="sub">剪一刀、拼成矩形，就看得出底 × 高</p>
+  </header>
+
+  <main class="wrap">
+    <section class="stage">
+      <div class="track"><i id="bar"></i></div>
+      <div class="canvas-wrap">
+        <canvas id="cv" aria-label="可拖动、切割和拼接的平行四边形"></canvas>
+        <div id="labels"></div>
+      </div>
+      <p class="hint" id="hint" aria-live="polite">拖动两个粉点：一个控制底边，一个控制高和倾斜</p>
+    </section>
+
+    <section class="panel">
+      <p class="msg" id="msg">拖动粉点改变形状，完成后点「确认形状」</p>
+      <div class="btns">
+        <button type="button" id="btnOk" class="primary">确认形状</button>
+        <button type="button" id="btnReset">重置</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Geometry = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  // Shoelace formula: works for any simple polygon.
+  function area(poly) {
+    let sum = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      sum += a.x * b.y - b.x * a.y;
+    }
+    return Math.abs(sum / 2);
+  }
+
+  function d2(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  // Sutherland–Hodgman clipping against a vertical line.
+  function clipX(poly, xCut, keepLeft) {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const cur = poly[i];
+      const nxt = poly[(i + 1) % poly.length];
+      const inC = keepLeft ? cur.x <= xCut + 1e-4 : cur.x >= xCut - 1e-4;
+      const inN = keepLeft ? nxt.x <= xCut + 1e-4 : nxt.x >= xCut - 1e-4;
+      if (inC) out.push(cur);
+      if (inC !== inN) {
+        const t = (xCut - cur.x) / (nxt.x - cur.x);
+        out.push({ x: xCut, y: cur.y + t * (nxt.y - cur.y) });
+      }
+    }
+    return out;
+  }
+
+  function pointInPoly(pt, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x, yi = poly[i].y;
+      const xj = poly[j].x, yj = poly[j].y;
+      if (((yi > pt.y) !== (yj > pt.y)) &&
+          (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+
+  function pieceBBox(piece) {
+    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    for (const p of piece.poly) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return {
+      minX, maxX, minY, maxY,
+      cx: (minX + maxX) / 2, cy: (minY + maxY) / 2,
+      w: maxX - minX, h: maxY - minY
+    };
+  }
+
+  return { area, d2, clipX, pointInPoly, pieceBBox };
+});
+
+  </script>
+  <script>
+(() => {
+  'use strict';
+
+  const { area, d2, clipX, pointInPoly, pieceBBox } = window.Geometry;
+  const $ = id => document.getElementById(id);
+  const cv = $('cv');
+  const ctx = cv.getContext('2d');
+  const msgEl = $('msg');
+  const btnOk = $('btnOk');
+  const btnReset = $('btnReset');
+  const hintEl = $('hint');
+  const barEl = $('bar');
+  const labelsEl = $('labels');
+  const wrapEl = document.querySelector('.canvas-wrap');
+
+  // 与站点其他题目共用一套材质色：粉主色 + 六色碎片
+  const C = {
+    grid: 'rgba(58,58,58,.055)',
+    axis: 'rgba(58,58,58,.13)',
+    shapeFill: 'rgba(212,83,126,.13)',
+    shapeLine: '#D4537E',
+    handleFill: '#FFFFFF',
+    handleLine: '#D4537E',
+    handleHover: '#FDF1F5',
+    dim: 'rgba(58,58,58,.34)',
+    dimText: '#8A7F80',
+    cutDone: '#993556',
+    cutPending: 'rgba(153,53,86,.42)',
+    cutHot: '#1D9E75',
+    ghost: 'rgba(58,58,58,.30)'
+  };
+  const PALETTE = ['#E03C5A', '#EFC030', '#45B05C', '#38B5B8', '#3D7FD8', '#9A5FD0'];
+
+  const IS_COARSE = matchMedia('(pointer: coarse)').matches;
+  const DEFAULT_SHAPE = { P1: { x: 220, y: 0 }, P2: { x: 110, y: 160 } };
+  const ST = { SETUP: 0, CUT1: 1, CUTN: 2, MOVE: 3, DONE: 4 };
+  const STATE_COPY = {
+    [ST.SETUP]: ['拖动粉点改变形状，完成后点「确认形状」', '两个粉点：一个控制底边，一个控制高和倾斜'],
+    [ST.CUT1]: ['在图形内部点一下，切下第一刀', '刀口会按底边长度自动排成网格'],
+    [ST.CUTN]: () => [`在虚线处再切 ${pendingCuts.length} 刀`, '沿虚线逐刀切开，切到没有虚线为止'],
+    [ST.MOVE]: ['把碎片拖到虚线框里，拼成一个矩形', '碎片会吸附到虚线框上'],
+    [ST.DONE]: ['拼好了：平行四边形面积 = 底 × 高', '剪下的部分只是搬了个家，面积没变']
+  };
+
+  // World coordinates use mathematical orientation: y points upwards.
+  const W = structuredClone(DEFAULT_SHAPE);
+  const cam = { ox: 0, oy: 0, z: 1 };
+  const toS = p => ({ x: cam.ox + p.x * cam.z, y: cam.oy - p.y * cam.z });
+  const fromS = s => ({ x: (s.x - cam.ox) / cam.z, y: (cam.oy - s.y) / cam.z });
+
+  let state = ST.SETUP;
+  let cutBase = null;
+  let pendingCuts = [];
+  let doneCuts = [];
+  let previewX = null;
+  let pressCut = null;
+  let pieces = [];
+  let dragging = null;
+  let hoverPt = null;
+  let dragCtx = null;
+  let pointer = { x: -999, y: -999, down: false };
+  let vw = 0;
+  let vh = 0;
+
+  const PT_R = IS_COARSE ? 13 : 9;
+  const SNAP = IS_COARSE ? 34 : 20;
+  const PAD = 10;
+
+  function shapeBBox() {
+    const a = W.P1.x, b = W.P2.x, d = W.P2.y;
+    return { minX: Math.min(0, b), maxX: Math.max(a, a + b), minY: 0, maxY: d };
+  }
+
+  function shapePoly() {
+    const a = W.P1.x, b = W.P2.x, d = W.P2.y;
+    return [{ x: 0, y: 0 }, { x: a, y: 0 }, { x: a + b, y: d }, { x: b, y: d }];
+  }
+
+  // 画布现在装在卡片里，尺寸以画布自身为准；四边留出标注的位置
+  function fitCamera(bbOverride) {
+    const bb = bbOverride || shapeBBox();
+    const M_R = 34, M_B = 36, M_L = 44, M_T = 36;
+    const bw = Math.max(1, bb.maxX - bb.minX) + M_L + M_R;
+    const bh = Math.max(1, bb.maxY - bb.minY) + M_T + M_B;
+    const availW = Math.max(80, vw - PAD * 2);
+    const availH = Math.max(80, vh - PAD * 2);
+    cam.z = Math.min(availW / bw, availH / bh);
+    const cx = (bb.minX + bb.maxX) / 2;
+    const cy = (bb.minY + bb.maxY) / 2;
+    cam.ox = vw / 2 + (M_L - M_R) / 2 - cx * cam.z;
+    cam.oy = vh / 2 + (M_T - M_B) / 2 + cy * cam.z;
+  }
+
+  function resize() {
+    const rect = wrapEl.getBoundingClientRect();
+    vw = Math.max(1, Math.round(rect.width || wrapEl.offsetWidth || 0));
+    vh = Math.max(1, Math.round(rect.height || wrapEl.offsetHeight || 0));
+    if (vw < 2 || vh < 2) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(vw * dpr);
+    cv.height = Math.round(vh * dpr);
+    // 实际设备像素 / CSS 像素 的比值比 devicePixelRatio 更可靠
+    ctx.setTransform(cv.width / vw, 0, 0, cv.height / vh, 0, 0);
+    fitCamera();
+    render();
+  }
+
+  function isSmallPiece(piece) {
+    const bb = pieceBBox(piece);
+    return Math.max(bb.w, bb.h) * cam.z < 60;
+  }
+
+  function pieceHit(m, piece) {
+    const local = { x: m.x - piece.off.x, y: m.y - piece.off.y };
+    if (pointInPoly(local, piece.poly)) return true;
+    if (isSmallPiece(piece)) {
+      const bb = pieceBBox(piece);
+      const cx = bb.cx + piece.off.x, cy = bb.cy + piece.off.y;
+      if (Math.hypot(m.x - cx, m.y - cy) * cam.z < 34) return true;
+    }
+    return false;
+  }
+
+  function setState(next) {
+    state = next;
+    barEl.style.width = (next / ST.DONE * 100) + '%';
+    // 拼好后把镜头收到矩形上：结果自己站到画面中央
+    if (next === ST.DONE && cutBase !== null) {
+      const a = W.P1.x, d = W.P2.y;
+      fitCamera({ minX: cutBase, maxX: cutBase + a, minY: 0, maxY: d });
+    }
+    const copy = STATE_COPY[next];
+    const [message, hint] = typeof copy === 'function' ? copy() : copy;
+    msgEl.textContent = message;
+    hintEl.textContent = hint;
+    btnOk.hidden = next !== ST.SETUP;
+    render();
+  }
+
+  function confirmShape() {
+    if (state !== ST.SETUP) return;
+    if (Math.abs(W.P2.x) < 2) {
+      const a = W.P1.x, d = W.P2.y;
+      cutBase = 0;
+      doneCuts = [];
+      pieces = [{
+        poly: [{ x: 0, y: 0 }, { x: a, y: 0 }, { x: a, y: d }, { x: 0, y: d }],
+        off: { x: 0, y: 0 }, color: PALETTE[0], movable: false,
+        target: { x: 0, y: 0 }, placed: true
+      }];
+      setState(ST.DONE);
+    } else {
+      previewX = null;
+      setState(ST.CUT1);
+    }
+  }
+
+  function reset() {
+    Object.assign(W, structuredClone(DEFAULT_SHAPE));
+    cutBase = null;
+    pendingCuts = [];
+    doneCuts = [];
+    pieces = [];
+    previewX = null;
+    pressCut = null;
+    dragging = null;
+    fitCamera();
+    setState(ST.SETUP);
+  }
+
+  function commitFirstCut(mx) {
+    const bb = shapeBBox();
+    if (mx <= bb.minX + 2 || mx >= bb.maxX - 2) return;
+    const a = W.P1.x;
+    cutBase = mx;
+    pendingCuts = [];
+    const kMin = Math.ceil((bb.minX - mx) / a + 1e-4);
+    const kMax = Math.floor((bb.maxX - mx) / a - 1e-4);
+    for (let k = kMin; k <= kMax; k++) {
+      const x = mx + k * a;
+      if (x > bb.minX + 2 && x < bb.maxX - 2) pendingCuts.push(x);
+    }
+    const i = pendingCuts.indexOf(mx);
+    if (i >= 0) {
+      pendingCuts.splice(i, 1);
+      doneCuts.push(mx);
+    } else doneCuts.push(mx);
+    if (pendingCuts.length === 0) {
+      doCuts();
+      setState(ST.MOVE);
+    } else setState(ST.CUTN);
+  }
+
+  function commitPendingCut(mx) {
+    for (let i = 0; i < pendingCuts.length; i++) {
+      if (Math.abs(mx - pendingCuts[i]) * cam.z < SNAP) {
+        doneCuts.push(pendingCuts[i]);
+        pendingCuts.splice(i, 1);
+        pressCut = null;
+        if (pendingCuts.length === 0) {
+          doCuts();
+          setState(ST.MOVE);
+        } else setState(ST.CUTN);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function doCuts() {
+    let current = [shapePoly()];
+    const cuts = [...doneCuts].sort((u, v) => u - v);
+    for (const x of cuts) {
+      const next = [];
+      for (const poly of current) {
+        const left = clipX(poly, x, true);
+        const right = clipX(poly, x, false);
+        if (area(left) > 1) next.push(left);
+        if (area(right) > 1) next.push(right);
+      }
+      current = next;
+    }
+    const a = W.P1.x;
+    pieces = current.map((poly, i) => {
+      const cx = poly.reduce((sum, p) => sum + p.x, 0) / poly.length;
+      const k = Math.floor((cx - cutBase) / a + 1e-6);
+      const anchor = k === 0;
+      return {
+        poly, off: { x: 0, y: 0 }, color: PALETTE[i % PALETTE.length],
+        movable: !anchor, target: { x: -k * a, y: 0 }, placed: anchor
+      };
+    });
+    // 拼好的矩形落在 [cutBase, cutBase + a] 这条竖条里；
+    // 取「原图形 ∪ 目标矩形」的并集重新取景，保证碎片和虚线框同时看得见
+    const bb = shapeBBox();
+    fitCamera({
+      minX: Math.min(bb.minX, cutBase), maxX: Math.max(bb.maxX, cutBase + a),
+      minY: 0, maxY: Math.max(bb.maxY, W.P2.y)
+    });
+  }
+
+  function checkDone() {
+    if (pieces.filter(p => p.movable).every(p => p.placed)) setState(ST.DONE);
+  }
+
+  function evPos(e) {
+    const rect = cv.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  cv.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button > 0) return;
+    cv.setPointerCapture(e.pointerId);
+    const s = evPos(e);
+    pointer = { ...s, down: true };
+    const m = fromS(s);
+
+    if (state === ST.SETUP) {
+      if (d2(toS(W.P1), s) < SNAP) dragging = 'P1';
+      else if (d2(toS(W.P2), s) < SNAP) dragging = 'P2';
+    } else if (state === ST.CUT1) {
+      previewX = m.x;
+    } else if (state === ST.CUTN) {
+      pressCut = null;
+      for (const x of pendingCuts) {
+        if (Math.abs(m.x - x) * cam.z < SNAP) { pressCut = x; break; }
+      }
+    } else if (state === ST.MOVE) {
+      for (let i = pieces.length - 1; i >= 0; i--) {
+        const piece = pieces[i];
+        if (!piece.movable || piece.placed) continue;
+        if (pieceHit(m, piece)) {
+          dragCtx = { startM: m, startOff: { ...piece.off } };
+          pieces.push(pieces.splice(i, 1)[0]);
+          dragging = pieces.length - 1;
+          break;
+        }
+      }
+    }
+    render();
+  });
+
+  cv.addEventListener('pointermove', e => {
+    const s = evPos(e);
+    pointer.x = s.x;
+    pointer.y = s.y;
+    const m = fromS(s);
+
+    if (state === ST.SETUP) {
+      hoverPt = null;
+      if (d2(toS(W.P1), s) < SNAP) hoverPt = 'P1';
+      else if (d2(toS(W.P2), s) < SNAP) hoverPt = 'P2';
+      cv.style.cursor = hoverPt ? 'grab' : 'default';
+    } else cv.style.cursor = 'default';
+
+    if (dragging === 'P1') {
+      const wWorld = vw / cam.z;
+      const maxA = Math.max(60, wWorld - Math.max(0, W.P2.x) - 24);
+      W.P1.x = Math.min(Math.max(60, m.x), maxA);
+    } else if (dragging === 'P2') {
+      const wWorld = vw / cam.z, hWorld = vh / cam.z;
+      W.P2.x = Math.min(Math.max(-wWorld * 0.55, m.x), wWorld * 0.55);
+      W.P2.y = Math.min(Math.max(60, m.y), hWorld * 0.92);
+    } else if (state === ST.CUT1 && pointer.down) {
+      previewX = m.x;
+    } else if (state === ST.MOVE && typeof dragging === 'number') {
+      const piece = pieces[dragging];
+      if (piece && dragCtx) {
+        piece.off.x = dragCtx.startOff.x + (m.x - dragCtx.startM.x);
+        piece.off.y = dragCtx.startOff.y + (m.y - dragCtx.startM.y);
+      }
+    }
+    render();
+  });
+
+  function endPointer(e) {
+    const s = evPos(e);
+    const m = fromS(s);
+    pointer.down = false;
+
+    if (state === ST.CUT1) {
+      if (pointInPoly(m, shapePoly())) commitFirstCut(m.x);
+      previewX = null;
+    } else if (state === ST.CUTN && pressCut !== null) {
+      commitPendingCut(m.x);
+    } else if (state === ST.MOVE && typeof dragging === 'number') {
+      const piece = pieces[dragging];
+      if (piece && d2(piece.off, piece.target) * cam.z < SNAP) {
+        piece.off = { ...piece.target };
+        piece.placed = true;
+        checkDone();
+      }
+    }
+    // 松手后重新取景：拖得再大也不会把图形推出画面
+    if (state === ST.SETUP && (dragging === 'P1' || dragging === 'P2')) fitCamera();
+    dragging = null;
+    dragCtx = null;
+    pressCut = null;
+    render();
+  }
+
+  cv.addEventListener('pointerup', endPointer);
+  cv.addEventListener('pointercancel', endPointer);
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  btnOk.addEventListener('click', confirmShape);
+  btnReset.addEventListener('click', reset);
+
+  function render() {
+    ctx.clearRect(0, 0, vw, vh);
+    drawGrid();
+    if (state === ST.SETUP || state === ST.CUT1 || state === ST.CUTN) {
+      drawShape();
+      if (state === ST.SETUP) drawSetupExtras();
+      if (state === ST.CUT1) drawCutPreview();
+      if (state === ST.CUTN) drawCutLines();
+    } else {
+      drawPieces();
+      if (state === ST.DONE) drawDoneDims();
+    }
+    renderLabels();
+  }
+
+  function drawGrid() {
+    const step = 50 * cam.z;
+    if (step < 14) return;
+    ctx.save();
+    ctx.strokeStyle = C.grid;
+    ctx.lineWidth = 1;
+    const x0 = cam.ox % step, y0 = cam.oy % step;
+    ctx.beginPath();
+    for (let x = x0; x < vw; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, vh); }
+    for (let y = y0; y < vh; y += step) { ctx.moveTo(0, y); ctx.lineTo(vw, y); }
+    ctx.stroke();
+    const o = toS({ x: 0, y: 0 });
+    ctx.strokeStyle = C.axis;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, o.y); ctx.lineTo(vw, o.y);
+    ctx.moveTo(o.x, 0); ctx.lineTo(o.x, vh);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function tracePoly(poly, off = { x: 0, y: 0 }) {
+    ctx.beginPath();
+    poly.forEach((p, i) => {
+      const s = toS({ x: p.x + off.x, y: p.y + off.y });
+      if (i) ctx.lineTo(s.x, s.y);
+      else ctx.moveTo(s.x, s.y);
+    });
+    ctx.closePath();
+  }
+
+  function drawShape() {
+    tracePoly(shapePoly());
+    ctx.fillStyle = C.shapeFill;
+    ctx.fill();
+    ctx.strokeStyle = C.shapeLine;
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    if (state === ST.SETUP) {
+      dot(toS(W.P1), hoverPt === 'P1' || dragging === 'P1');
+      dot(toS(W.P2), hoverPt === 'P2' || dragging === 'P2');
+      const o = toS({ x: 0, y: 0 });
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(58,58,58,.3)';
+      ctx.fill();
+    }
+  }
+
+  function dot(s, active) {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, active ? PT_R + 3 : PT_R, 0, Math.PI * 2);
+    ctx.fillStyle = active ? C.handleHover : C.handleFill;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = C.handleLine;
+    ctx.stroke();
+  }
+
+  function drawSetupExtras() {
+    const a = W.P1.x, d = W.P2.y;
+    dimLine({ x: 0, y: -22 }, { x: a, y: -22 }, 'a = ' + Math.round(a));
+    const bb = shapeBBox();
+    dimLine({ x: bb.maxX + 22, y: 0 }, { x: bb.maxX + 22, y: d }, 'h = ' + Math.round(d), true);
+  }
+
+  function dimLine(p1, p2, text, vertical) {
+    const s1 = toS(p1), s2 = toS(p2);
+    ctx.save();
+    ctx.strokeStyle = C.dim;
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s2.x, s2.y);
+    ctx.stroke();
+    // 两端短引线，读起来更像“量出来的一段”
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    if (vertical) {
+      ctx.moveTo(s1.x - 4, s1.y); ctx.lineTo(s1.x + 4, s1.y);
+      ctx.moveTo(s2.x - 4, s2.y); ctx.lineTo(s2.x + 4, s2.y);
+    } else {
+      ctx.moveTo(s1.x, s1.y - 4); ctx.lineTo(s1.x, s1.y + 4);
+      ctx.moveTo(s2.x, s2.y - 4); ctx.lineTo(s2.x, s2.y + 4);
+    }
+    ctx.stroke();
+    ctx.fillStyle = C.dimText;
+    ctx.font = '600 13px -apple-system, "PingFang SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (vertical) {
+      const my = (s1.y + s2.y) / 2;
+      ctx.save();
+      ctx.translate(s1.x + 16, my);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
+    } else ctx.fillText(text, (s1.x + s2.x) / 2, s1.y + 15);
+    ctx.restore();
+  }
+
+  function vLine(x, color, width, dash) {
+    const top = toS({ x, y: W.P2.y + 30 });
+    const bottom = toS({ x, y: -30 });
+    ctx.save();
+    if (dash) ctx.setLineDash(dash);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(top.x, top.y);
+    ctx.lineTo(bottom.x, bottom.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCutPreview() {
+    const bb = shapeBBox();
+    if (previewX === null || previewX < bb.minX || previewX > bb.maxX) return;
+    const a = W.P1.x;
+    const kMin = Math.ceil((bb.minX - previewX) / a + 1e-4);
+    const kMax = Math.floor((bb.maxX - previewX) / a - 1e-4);
+    for (let k = kMin; k <= kMax; k++) {
+      const x = previewX + k * a;
+      if (x <= bb.minX + 2 || x >= bb.maxX - 2) continue;
+      vLine(x, k === 0 ? C.cutDone : C.cutPending, k === 0 ? 2.5 : 1.5, [6, 6]);
+    }
+  }
+
+  function drawCutLines() {
+    doneCuts.forEach(x => vLine(x, C.cutDone, 2));
+    const m = fromS(pointer);
+    pendingCuts.forEach(x => {
+      const hot = pressCut === x || (!IS_COARSE && Math.abs(m.x - x) * cam.z < SNAP);
+      vLine(x, hot ? C.cutHot : C.cutPending, hot ? 3.5 : 1.8, [6, 6]);
+    });
+  }
+
+  function drawDoneDims() {
+    const a = W.P1.x, d = W.P2.y;
+    const baseX = cutBase !== null ? cutBase : 0;
+    dimLine({ x: baseX, y: -22 }, { x: baseX + a, y: -22 }, '');
+    dimLine({ x: baseX - 22, y: 0 }, { x: baseX - 22, y: d }, '', true);
+  }
+
+  function drawPieces() {
+    for (const piece of pieces) {
+      tracePoly(piece.poly, piece.off);
+      ctx.globalAlpha = .55;
+      ctx.fillStyle = piece.color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = piece.color;
+      ctx.lineWidth = 1.8;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+    for (const piece of pieces) {
+      if (piece.movable && !piece.placed) {
+        tracePoly(piece.poly, piece.target);
+        ctx.strokeStyle = C.ghost;
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (isSmallPiece(piece)) {
+          const bb = pieceBBox(piece);
+          const s = toS({ x: bb.cx + piece.off.x, y: bb.cy + piece.off.y });
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff';
+          ctx.fill();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = C.handleLine;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function renderLabels() {
+    labelsEl.innerHTML = '';
+    if (state !== ST.DONE) return;
+    const a = W.P1.x, d = W.P2.y;
+    const baseX = cutBase !== null ? cutBase : 0;
+    // 不依赖 KaTeX：字母用衬线斜体，与公式排版的观感一致，仍然是零依赖单文件
+    const put = (html, sx, sy, cls) => {
+      const el = document.createElement('div');
+      el.className = 'klabel' + (cls ? ' ' + cls : '');
+      el.style.left = sx + 'px';
+      el.style.top = sy + 'px';
+      el.innerHTML = html;
+      labelsEl.appendChild(el);
+    };
+    const center = toS({ x: baseX + a / 2, y: d / 2 });
+    put('S = <i>a</i> × <i>h</i>', center.x, center.y, 'formula');
+    const base = toS({ x: baseX + a / 2, y: -22 });
+    put('a', base.x, base.y, 'dim');
+    const height = toS({ x: baseX - 22, y: d / 2 });
+    put('h', height.x, height.y, 'dim');
+  }
+
+  // 无头浏览器验证用的只读探针（不影响正常交互）
+  window.__pg = {
+    ST, W, cam, toS, fromS,
+    get state() { return state; },
+    get pieces() { return pieces; },
+    get pending() { return pendingCuts; },
+    get cuts() { return doneCuts; },
+    get cutBase() { return cutBase; }
+  };
+
+  window.addEventListener('load', () => { resize(); renderLabels(); });
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+  if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(wrapEl);
+  requestAnimationFrame(resize);
+  resize();
+  setState(ST.SETUP);
+})();
+
+  </script>
+</body>
+</html>

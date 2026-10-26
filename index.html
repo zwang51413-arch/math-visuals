@@ -6,12 +6,12 @@
 <title>交互教学小程序</title>
 <style>
   :root {
-    --bg: #fdf7f4;
-    --card: #ffffff;
-    --ink: #33302e;
-    --muted: #8d8783;
-    --line: #f0e4de;
-    --accent: #e88b9a;
+    --bg: #FBF7F6;
+    --card: #FFFFFF;
+    --ink: #3A3A3A;
+    --muted: #8A7F80;
+    --line: #F0E4E6;
+    --accent: #D4537E;
   }
   * { box-sizing: border-box; }
   body {
@@ -32,15 +32,15 @@
     background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 18px 20px; transition: transform .15s ease, box-shadow .15s ease;
   }
-  a.item:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(180, 140, 130, .13); }
+  a.item:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(153, 53, 86, .1); }
   .t { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
   .d { font-size: 13px; color: var(--muted); }
   .tag {
     display: inline-block; font-size: 12px; color: var(--accent);
-    background: #fdeff1; border-radius: 999px; padding: 1px 9px; margin-left: 8px;
+    background: #FDF1F5; border-radius: 999px; padding: 1px 9px; margin-left: 8px;
     vertical-align: 2px;
   }
-  footer { margin-top: 36px; font-size: 12px; color: #b3aca8; }
+  footer { margin-top: 36px; font-size: 12px; color: #B3ACA8; }
 </style>
 </head>
 <body>
@@ -48,6 +48,10 @@
     <h1>交互教学小程序</h1>
     <p class="sub">把有认知门槛的数学概念，压成一张能动手玩的图。</p>
     <div class="list">
+      <a class="item" href="./parallelogram-area/">
+        <div class="t">平行四边形面积<span class="tag">小学 · 面积</span></div>
+        <div class="d">拖出一个平行四边形，切一刀搬到另一边——拼成矩形，就看出它是底 × 高。</div>
+      </a>
       <a class="item" href="./triangle-angle-sum/">
         <div class="t">三角形内角和<span class="tag">初中 · 入门</span></div>
         <div class="d">箭头沿三条边走一圈，三个内角刚好拼成一条直线——180° 是走出来的，不是背下来的。</div>

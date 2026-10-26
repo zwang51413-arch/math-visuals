@@ -6,6 +6,7 @@
 
 | 链接 | 学段 | 说明 |
 | --- | --- | --- |
+| [parallelogram-area](./parallelogram-area/) | 小学 · 面积 | 平行四边形面积：切一刀搬到另一边，拼成矩形看出底 × 高 |
 | [triangle-angle-sum](./triangle-angle-sum/) | 初中 · 入门 | 三角形内角和：箭头沿边走一圈，三个内角拼成一条直线 |
 | [cube-net](./cube-net/) | 小学 · 空间 | 正方体展开图：11 种合法展开图可拖动折叠，相对面自动配对，另含反例 |
 
