@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#FBF7F6">
+  <title>中心极限：戈顿板</title>
+  <style>
+:root {
+  --bg: #FBF7F6;
+  --card: #FFFFFF;
+  --ink: #3A3A3A;
+  --muted: #8A7F80;
+  --pink: #D4537E;
+  --pink-deep: #993556;
+  --line: #F0E4E6;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.head {
+  padding: 20px 20px 4px;
+  text-align: center;
+}
+.head h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.head .sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 32px;
+}
+
+.stage {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: 0 6px 24px rgba(153, 53, 86, 0.06);
+}
+#cv {
+  display: block;
+  width: 100%;
+  height: clamp(320px, 52vh, 440px);
+  touch-action: manipulation;
+}
+#cv.peekable { cursor: pointer; }
+
+.hint {
+  margin: 10px 4px 2px;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: center;
+  min-height: 20px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-top: 12px;
+  padding: 14px 16px 12px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.slider-label {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.slider-val {
+  font-size: 13px;
+  color: var(--pink-deep);
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 36px;
+  text-align: right;
+}
+input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 6px;
+  background: #F4D8E2;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(153, 53, 86, 0.4);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(153, 53, 86, 0.4);
+  cursor: pointer;
+}
+
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.btns button {
+  flex: 1 1 0;
+  min-width: 84px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.btns button:active { transform: scale(0.97); }
+.btns button.primary {
+  background: var(--pink);
+  border-color: var(--pink);
+  color: #fff;
+  font-weight: 600;
+}
+.btns button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tip {
+  margin: 10px 2px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .wrap { padding: 10px 10px 24px; }
+  #cv { height: 470px; }
+  .btns button { min-width: 72px; padding: 9px 10px; font-size: 13px; }
+}
+
+  </style>
+</head>
+<body>
+  <header class="head">
+    <h1>中心极限 · 戈顿板</h1>
+    <p class="sub">一颗球往哪落说不准，几百颗球堆起来却是钟形</p>
+  </header>
+
+  <main class="wrap">
+    <section class="stage">
+      <canvas id="cv" aria-label="戈顿板：小球逐排随机左右分流，落入底部槽中堆成钟形"></canvas>
+      <p class="hint" id="hint" aria-live="polite">点「放一颗」看它一路乱撞，再点「放 200 颗」看钟形长出来</p>
+    </section>
+
+    <section class="panel">
+      <div class="slider-row">
+        <span class="slider-label">4 排</span>
+        <input type="range" id="rows" min="4" max="12" step="1" value="8" aria-label="钉子排数">
+        <span class="slider-label">12 排</span>
+        <span class="slider-val" id="rowsVal">8 排</span>
+      </div>
+
+      <div class="btns">
+        <button type="button" id="drop1" class="primary">放一颗</button>
+        <button type="button" id="drop200">放 200 颗</button>
+        <button type="button" id="clear">清空</button>
+      </div>
+
+      <p class="tip">点底部的槽，看有多少条路能走到它——中间的槽走法最多</p>
+    </section>
+  </main>
+
+  <script>
+// 戈顿板数学内核（纯函数，不碰 DOM）
+// 一颗球过 n 排钉子，每排独立左/右（各 1/2）；向右次数 k 落第 k 槽，
+// 概率 C(n,k)/2^n（二项分布），n 大时逼近 N(n/2, n/4)。
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Galton = api;
+})(typeof window !== 'undefined' ? window : globalThis, function () {
+  'use strict';
+
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  // 组合数 C(n,k)，整数（n ≤ 20 内精确）
+  function binom(n, k) {
+    if (k < 0 || k > n) return 0;
+    k = Math.min(k, n - k);
+    let r = 1;
+    for (let i = 1; i <= k; i++) r = r * (n - k + i) / i;
+    return Math.round(r);
+  }
+
+  // 第 n 行的二项式系数 [C(n,0)..C(n,n)]
+  function binomialRow(n) {
+    const row = [];
+    for (let k = 0; k <= n; k++) row.push(binom(n, k));
+    return row;
+  }
+
+  // 落进第 k 槽的概率 C(n,k)/2^n
+  function probabilities(n) {
+    return binomialRow(n).map(c => c / Math.pow(2, n));
+  }
+
+  // 所有可能路径总数 2^n
+  function totalPaths(n) { return Math.pow(2, n); }
+
+  // 走到第 k 槽的路径条数（= C(n,k)）
+  function pathsTo(n, k) { return binom(n, k); }
+
+  // 理论钟形：正态 N(μ=n/2, σ²=n/4) 的密度
+  function normalDensity(x, n) {
+    const mu = n / 2;
+    const sigma2 = n / 4;
+    return Math.exp(-Math.pow(x - mu, 2) / (2 * sigma2)) /
+      Math.sqrt(2 * Math.PI * sigma2);
+  }
+
+  // 理论峰值处的密度（用于把曲线归一化到最高柱）
+  function normalPeak(n) { return normalDensity(n / 2, n); }
+
+  // 一次落球的完整之字形路径。
+  // 返回 { slot, xs }：xs[j] 是第 j 个节点的横坐标（半格单位，槽 k 中心 = k - n/2）。
+  //   xs[0]    放球口 x=0
+  //   xs[1..n] 第 0..n-1 排钉子处的 x（必然命中该排某个钉子）
+  //   xs[n+1]  落入槽的 x = slot - n/2
+  // 纵向由节点序号给出：节点 j 的 y = j（放球口 0，槽顶 n+1）。
+  // rng() 可注入以便测试；不传则用 Math.random。
+  function dropPath(n, rng) {
+    const rand = rng || Math.random;
+    const xs = [0];
+    let x = 0;
+    for (let i = 0; i < n; i++) {
+      xs.push(x);                       // 抵达第 i 排钉子
+      x += rand() < 0.5 ? -0.5 : 0.5;  // 碰钉子后向左或向右偏半格
+    }
+    xs.push(x);                         // 落槽
+    const slot = Math.round(x + n / 2);
+    return { slot: clamp(slot, 0, n), xs };
+  }
+
+  return {
+    clamp,
+    binom,
+    binomialRow,
+    probabilities,
+    totalPaths,
+    pathsTo,
+    normalDensity,
+    normalPeak,
+    dropPath
+  };
+});
+
+  </script>
+  <script>
+(function () {
+  'use strict';
+  const G = window.Galton;
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const hintEl = document.getElementById('hint');
+  const rowsSlider = document.getElementById('rows');
+  const rowsVal = document.getElementById('rowsVal');
+  const drop1Btn = document.getElementById('drop1');
+  const drop200Btn = document.getElementById('drop200');
+  const clearBtn = document.getElementById('clear');
+
+  // 一排钉子的纵向间距 = 槽宽 × ROW_RATIO，让板子不过分瘦高
+  const ROW_RATIO = 0.72;
+
+  const state = {
+    n: 8,
+    counts: new Array(9).fill(0),
+    total: 0,
+    balls: [],          // 飞行中的球
+    peek: -1,
+    lastSingle: -1
+  };
+
+  let cvW = 1, cvH = 1;
+  let L = null;        // 当前布局（CSS 像素）
+  let raf = null;
+  // 录制时使用虚拟时钟（毫秒），由 driver 逐帧 advance 驱动，保证视频确定性；
+  // 为 null 时用真实 performance.now()，供用户正常交互。
+  let virtualClock = null;
+  const nowMs = () => (virtualClock === null ? performance.now() : virtualClock);
+
+  // ---------- 布局：按 canvas 自身 rect 取景 ----------
+  function computeLayout() {
+    const n = state.n;
+    const padX = 22;
+    const topPad = 14;
+    const boardH = cvH * 0.62;
+    const unit = Math.min(
+      (cvW - 2 * padX) / (n + 1.9),
+      boardH / (0.72 * (n + 1) + 0.35)
+    );
+    const rowH = unit * ROW_RATIO;
+    const centerX = cvW / 2;
+    const yOffset = topPad + 0.35 * unit;
+    const slotTop = yOffset + (n + 1) * rowH;
+    const slotBottom = cvH - 16;
+    const slotH = Math.max(30, slotBottom - slotTop);
+    L = {
+      n, padX, topPad, boardH, unit, rowH, centerX, yOffset,
+      slotTop, slotBottom, slotH,
+      // 留出槽区顶部空白带，供点槽标签使用，避免压住柱顶数字
+      maxBarH: slotH * 0.72,
+      ballR: Math.max(3.2, unit * 0.14),
+      pinR: Math.max(2, unit * 0.075)
+    };
+  }
+
+  const worldX = x => L.centerX + x * L.unit;
+  const nodeY = j => L.yOffset + j * L.rowH;
+  const slotCX = k => L.centerX + (k - state.n / 2) * L.unit;
+
+  function resize() {
+    const rect = cv.getBoundingClientRect();
+    const cssW = rect.width, cssH = rect.height;
+    if (cssW < 1 || cssH < 1) return;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.max(1, Math.round(cssW * dpr));
+    cv.height = Math.max(1, Math.round(cssH * dpr));
+    // 用实际比值而非 devicePixelRatio，避免 Retina 上取整误差
+    ctx.setTransform(cv.width / cssW, 0, 0, cv.height / cssH, 0, 0);
+    cvW = cssW; cvH = cssH;
+    computeLayout();
+    render();
+  }
+
+  // ---------- 基础绘制 ----------
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawFunnel() {
+    const c = L.centerX, y = L.yOffset, u = L.unit;
+    ctx.strokeStyle = '#E3A8BE';
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(c - u * 0.62, y - 12);
+    ctx.lineTo(c - u * 0.10, y + 4);
+    ctx.moveTo(c + u * 0.62, y - 12);
+    ctx.lineTo(c + u * 0.10, y + 4);
+    ctx.stroke();
+  }
+
+  function drawPins() {
+    ctx.fillStyle = '#8A7F80';
+    for (let i = 0; i < state.n; i++) {
+      const y = nodeY(i + 1);
+      for (let j = 0; j <= i; j++) {
+        const x = L.centerX + (j - i / 2) * L.unit;
+        ctx.beginPath();
+        ctx.arc(x, y, L.pinR, 0, TAU);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawSlotZone() {
+    const n = state.n, u = L.unit;
+    // 被点中的槽：整列淡色高亮
+    if (state.peek >= 0) {
+      ctx.fillStyle = 'rgba(212, 83, 126, 0.10)';
+      ctx.fillRect(slotCX(state.peek) - u / 2, L.slotTop, u, L.slotBottom - L.slotTop);
+    }
+    // 槽壁
+    ctx.strokeStyle = '#F0E4E6';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let m = 0; m <= n + 1; m++) {
+      const x = L.centerX + (m - n / 2 - 0.5) * u;
+      ctx.moveTo(x, L.slotTop);
+      ctx.lineTo(x, L.slotBottom);
+    }
+    ctx.moveTo(L.centerX - (n / 2 + 0.5) * u, L.slotBottom);
+    ctx.lineTo(L.centerX + (n / 2 + 0.5) * u, L.slotBottom);
+    ctx.stroke();
+  }
+
+  function drawBarBalls(cx, bottom, bw, h) {
+    const r = Math.max(2, L.unit * 0.105);
+    const cols = Math.max(2, Math.floor(bw / (2 * r)));
+    const stepY = r * 1.8;
+    const stepX = bw / cols;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cx - bw / 2, bottom - h, bw, h);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    let row = 0;
+    for (let y = bottom - r - 1; y > bottom - h - r; y -= stepY) {
+      const off = (row % 2) ? stepX / 2 : 0;
+      for (let c = 0; c <= cols; c++) {
+        const x = cx - bw / 2 + c * stepX + off;
+        if (x >= cx - bw / 2 - r && x <= cx + bw / 2 + r) {
+          ctx.beginPath();
+          ctx.arc(x, y, r * 0.6, 0, TAU);
+          ctx.fill();
+        }
+      }
+      row++;
+    }
+    ctx.restore();
+  }
+
+  function drawBars() {
+    const n = state.n, u = L.unit;
+    let maxCount = 1;
+    for (let k = 0; k <= n; k++) maxCount = Math.max(maxCount, state.counts[k]);
+    // 球少时柱矮小，球多时最高柱长满并始终对齐曲线峰
+    const scale = Math.max(maxCount, 6);
+    const bw = u * 0.82;
+    for (let k = 0; k <= n; k++) {
+      const c = state.counts[k];
+      if (!c) continue;
+      const h = c / scale * L.maxBarH;
+      const cx = slotCX(k);
+      ctx.fillStyle = 'rgba(212, 83, 126, 0.55)';
+      ctx.fillRect(cx - bw / 2, L.slotBottom - h, bw, h);
+      drawBarBalls(cx, L.slotBottom, bw, h);
+      ctx.strokeStyle = state.peek === k ? '#993556' : '#D4537E';
+      ctx.lineWidth = state.peek === k ? 2 : 1.2;
+      ctx.strokeRect(cx - bw / 2, L.slotBottom - h, bw, h);
+      // 数值画在柱内顶端（白色描边保证在球堆纹理上可读）；柱太矮时放柱上方
+      ctx.font = '600 11.5px -apple-system, "PingFang SC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillStyle = '#993556';
+      if (h >= 20) {
+        ctx.textBaseline = 'top';
+        ctx.strokeText(String(c), cx, L.slotBottom - h + 3);
+        ctx.fillText(String(c), cx, L.slotBottom - h + 3);
+      } else {
+        ctx.textBaseline = 'bottom';
+        ctx.strokeText(String(c), cx, L.slotBottom - h - 3);
+        ctx.fillText(String(c), cx, L.slotBottom - h - 3);
+      }
+    }
+  }
+
+  // 理论钟形 N(n/2, n/4)，归一化到最高柱的高度
+  function drawCurve() {
+    const n = state.n, peak = G.normalPeak(n);
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = '#993556';
+    ctx.lineWidth = 1.8;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let s = 0; s <= 140; s++) {
+      const u = s / 140 * n;
+      const ratio = G.normalDensity(u, n) / peak;
+      const x = L.centerX + (u - n / 2) * L.unit;
+      const y = L.slotBottom - ratio * L.maxBarH;
+      if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBall(x, y) {
+    ctx.fillStyle = '#D4537E';
+    ctx.strokeStyle = '#993556';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, L.ballR, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function drawFlyingBalls(now) {
+    const n = state.n;
+    for (const b of state.balls) {
+      let p = (now - b.start) / b.dur;
+      if (p < 0) continue;
+      if (p >= 1) {
+        if (!b.landed) {
+          b.landed = true;
+          state.counts[b.slot]++;
+          state.total++;
+        }
+        continue;
+      }
+      let x, y;
+      if (p > 0.9) {
+        // 最后一段：从槽口滑进槽内
+        const q = (p - 0.9) / 0.1;
+        x = b.xs[n + 1];
+        y = nodeY(n + 1) + q * (L.slotH * 0.30);
+      } else {
+        const pe = Math.pow(p / 0.9, 1.12) * (n + 1);
+        let seg = Math.floor(pe);
+        if (seg > n) seg = n;
+        const f = pe - seg;
+        x = b.xs[seg] + (b.xs[seg + 1] - b.xs[seg]) * f;
+        y = nodeY(pe);
+      }
+      drawBall(worldX(x), y);
+    }
+  }
+
+  // 点槽后的信息标签：放在槽区内部顶部的空白带（钉子阵之下、柱顶之上），
+  // 不遮挡任何钉子、柱子或数字。
+  function drawPeekBubble() {
+    if (state.peek < 0) return;
+    const n = state.n, k = state.peek;
+    const paths = G.pathsTo(n, k);
+    const label = `C(${n}, ${k}) = ${paths} 条路径`;
+    ctx.font = '600 12.5px -apple-system, "PingFang SC", sans-serif';
+    const bw = Math.max(96, ctx.measureText(label).width + 24);
+    const bh = 22;
+    const cx = slotCX(k);
+    const bx = clamp(cx - bw / 2, 6, cvW - bw - 6);
+    const by = L.slotTop + 1;
+
+    roundRect(bx, by, bw, bh, 8);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+    ctx.fill();
+    ctx.strokeStyle = '#E3A8BE';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#993556';
+    ctx.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
+  }
+
+  // ---------- 渲染 ----------
+  function render() {
+    if (!L) return;
+    ctx.clearRect(0, 0, cvW, cvH);
+    drawFunnel();
+    drawPins();
+    drawSlotZone();
+    drawBars();
+    drawCurve();
+    drawFlyingBalls(nowMs());
+    drawPeekBubble();
+  }
+
+  // ---------- 动画循环 ----------
+  function tick() {
+    if (virtualClock !== null) { raf = null; return; } // 虚拟时钟由 advance 驱动
+    render();
+    state.balls = state.balls.filter(b => !b.landed);
+    if (state.balls.length) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      raf = null;
+      updateHint();
+      render();
+    }
+  }
+  function ensureTick() {
+    if (virtualClock !== null) return; // 录制时不自动跑 rAF
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+
+  // ---------- 提示 ----------
+  function updateHint() {
+    if (state.peek >= 0) {
+      const k = state.peek;
+      const paths = G.pathsTo(state.n, k);
+      const mid = Math.floor(state.n / 2);
+      const maxPaths = G.binom(state.n, mid);
+      const isMid = paths === maxPaths;
+      hintEl.style.color = '#993556';
+      hintEl.textContent = isMid
+        ? `第 ${k} 槽：C(${state.n}, ${k}) = ${paths} 条路，走法最多，所以球最多`
+        : `第 ${k} 槽：C(${state.n}, ${k}) = ${paths} 条路，比中间槽的 ${maxPaths} 条少`;
+    } else if (state.balls.length) {
+      hintEl.style.color = '#3A3A3A';
+      hintEl.textContent = '球在一排排钉子间随机左右——单看一颗，谁也猜不到它落哪';
+    } else if (state.total > 0) {
+      hintEl.style.color = '#3A3A3A';
+      const single = state.lastSingle >= 0 && state.total === 1
+        ? `这颗球落进了第 ${state.lastSingle} 槽。` : '';
+      hintEl.textContent = single + `已落 ${state.total} 颗：每颗都随机，堆起来却贴住钟形曲线`;
+    } else {
+      hintEl.style.color = '#3A3A3A';
+      hintEl.textContent = '点「放一颗」看它一路乱撞，再点「放 200 颗」看钟形长出来';
+    }
+  }
+
+  // ---------- 交互 ----------
+  function spawn(delay, dur) {
+    const path = G.dropPath(state.n);
+    state.balls.push({
+      xs: path.xs, slot: path.slot,
+      start: nowMs() + delay, dur, landed: false
+    });
+  }
+
+  function dropOne() {
+    spawn(0, 1250);
+    state.lastSingle = state.balls[state.balls.length - 1].slot;
+    state.peek = -1;
+    ensureTick();
+    updateHint();
+  }
+
+  function dropMany(m) {
+    for (let i = 0; i < m; i++) spawn(i * 22, 780);
+    state.lastSingle = -1;
+    state.peek = -1;
+    ensureTick();
+    updateHint();
+  }
+
+  function clearAll() {
+    state.balls = [];
+    state.counts = new Array(state.n + 1).fill(0);
+    state.total = 0;
+    state.peek = -1;
+    state.lastSingle = -1;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    render();
+    updateHint();
+  }
+
+  function setRows(n) {
+    n = clamp(Math.round(n), 4, 12);
+    state.n = n;
+    state.counts = new Array(n + 1).fill(0);
+    state.total = 0;
+    state.balls = [];
+    state.peek = -1;
+    state.lastSingle = -1;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    rowsSlider.value = String(n);
+    rowsVal.textContent = n + ' 排';
+    computeLayout();
+    render();
+    updateHint();
+  }
+
+  cv.addEventListener('pointerdown', e => {
+    const rect = cv.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (y >= L.slotTop - 6) {
+      const k = Math.round((x - L.centerX) / L.unit + state.n / 2);
+      if (k >= 0 && k <= state.n) {
+        state.peek = state.peek === k ? -1 : k;
+        render();
+        updateHint();
+        return;
+      }
+    }
+    if (state.peek !== -1) {
+      state.peek = -1;
+      render();
+      updateHint();
+    }
+  });
+
+  drop1Btn.addEventListener('click', dropOne);
+  drop200Btn.addEventListener('click', () => dropMany(200));
+  clearBtn.addEventListener('click', clearAll);
+  rowsSlider.addEventListener('input', () => setRows(parseInt(rowsSlider.value, 10)));
+
+  window.addEventListener('resize', resize);
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(resize).observe(cv);
+  }
+
+  // ---------- 测试钩子 ----------
+  window.__galton = {
+    state: () => ({
+      n: state.n, total: state.total, counts: state.counts.slice(),
+      maxCount: Math.max.apply(null, state.counts), peek: state.peek,
+      flying: state.balls.length
+    }),
+    probs: () => G.probabilities(state.n),
+    binomRow: () => G.binomialRow(state.n),
+    pathsTo: k => G.pathsTo(state.n, k),
+    normalPeak: () => G.normalPeak(state.n),
+    dropOne, dropMany, clear: clearAll, setRows,
+    peek: k => { state.peek = k; render(); updateHint(); },
+    settle: () => {
+      for (const b of state.balls) {
+        if (!b.landed) { b.landed = true; state.counts[b.slot]++; state.total++; }
+      }
+      state.balls = [];
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      render();
+      updateHint();
+    },
+    // 录制：切换虚拟时钟并逐帧推进，保证视频时长确定
+    setVirtualClock: v => {
+      virtualClock = v;
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+    },
+    advance: ms => {
+      virtualClock = (virtualClock === null ? 0 : virtualClock) + ms;
+      render();
+      state.balls = state.balls.filter(b => !b.landed);
+      if (!state.balls.length) updateHint();
+      return state.balls.length; // 录制脚本据此判断是否全部落定
+    },
+    toScreen: k => {
+      const r = cv.getBoundingClientRect();
+      return {
+        x: r.left + slotCX(k),
+        y: r.top + (L.slotTop + L.slotBottom) / 2
+      };
+    }
+  };
+
+  // ---------- 启动 ----------
+  resize();
+  requestAnimationFrame(resize);
+  updateHint();
+})();
+
+  </script>
+</body>
+</html>
